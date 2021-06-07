@@ -656,26 +656,4 @@ def main():
         recv = central.write_wait_notification(tepra_tx, p(0xf0, 0x5e), tepra_rx)
         print('Received:', hexstr(recv))
 
-    '''
-    def on_rx(v):
-        print('RX', v)
-
-    central.on_notify(on_rx)
-
-    with_response = False
-
-    i = 0
-    while central.is_connected():
-        try:
-            v = str(i) + '_'
-            print('TX', v)
-            central.write(v, with_response)
-        except:
-            print('TX failed')
-        i += 1
-        time.sleep_ms(400 if with_response else 30)
-
-    print('Disconnected')
-    '''
-
     return central, svcs, chrs, descs
