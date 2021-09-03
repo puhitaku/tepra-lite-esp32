@@ -1,0 +1,3 @@
+[submodule "nanoweb"]
+	path = nanoweb
+	url = https://github.com/hugokernel/micropython-nanoweb.git
