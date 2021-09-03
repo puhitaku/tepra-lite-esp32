@@ -282,7 +282,7 @@ class BLESimpleCentral:
             return
         print('BT:', *o)
 
-    def scan(self):
+    def scan(self) -> bool:
         """Find a device advertising the environmental sensor service."""
         found = None
 
@@ -563,97 +563,191 @@ def lookup_characteristic(chrs: list[list[Characteristic]], uuid: bluetooth.UUID
                 return c
 
 
+class Tepra:
+    _battery_svc: Service
+    _print_svc: Service
+
+    _battery_chr: Characteristic
+    _tx: Characteristic
+    _rx: Characteristic
+
+    _ble = bluetooth.BLE
+    _central = BLESimpleCentral
+    _debug = False
+
+    def __init__(self, debug=False):
+        self._ble = bluetooth.BLE()
+        self._central = BLESimpleCentral(self._ble, debug=debug)
+        self._debug = debug
+
+    def _log(self, *o):
+        if not self._debug:
+            return
+        print('Tepra:', *o)
+
+    def connect(self) -> bool:
+        # Scan and find a TEPRA Lite
+        success = self._central.scan()
+        if not success:
+            self._log('TEPRA Lite was not found')
+            return False
+
+        # Connect to it
+        success = self._central.connect()
+        if not success:
+            self._log('Failed to connect to the TEPRA Lite, resetting...')
+            return False
+
+        # Discover all services
+        svcs = self._central.discover_services()
+        if not svcs:
+            self._log('Failed to discover any service of TEPRA Lite, resetting...')
+            return False
+
+        # Discover all characteristics in all services
+        chrs = []
+        for svc in svcs:
+            chrs.append(self._central.discover_characteristics(svc))
+
+        if not chrs:
+            self._log('Failed to discover any characteristic of the service, resetting...')
+            return False
+
+        # Discover all descriptors in all services
+        descs = []
+        for svc in svcs:
+            descs.append(self._central.discover_descriptors(svc))
+
+        if len(chrs) < 2:
+            self._log('Insufficient number of characteristics, resetting...')
+            return False
+
+        # Look for characteristics
+        self._battery_chr = lookup_characteristic(chrs, bluetooth.UUID(0x2a19))
+        self._tx = lookup_characteristic(chrs, bluetooth.UUID(0xfff2))
+        self._rx = lookup_characteristic(chrs, bluetooth.UUID(0xfff1))
+
+        if self._tx is None or self._rx is None:
+            self._log('Failed to lookup the printer status characteristic, resetting...')
+            return False
+
+        # Set CCCD of RX characteristics
+        self._central.write_cccd(self._rx, indication=False, notification=True)
+        return True
+
+    def disconnect(self):
+        raise NotImplementedError
+
+    def fetch_remaining_battery(self) -> int:
+        recv = self._central.read(self._battery_chr)
+        if recv is None or len(recv) < 1:
+            self._log('Failed to read the battery information, resetting...')
+            return False
+        return recv[0]
+
+    def get_ready(self) -> bool:
+        recv = self._central.write_wait_notification(self._tx, b'\xf0\x5a', self._rx)
+        if not recv:
+            return False
+        self._log('Recv:', recv)
+
+        recv = self._central.write_wait_notification(self._tx, p(0xf0, 0x5b, 0x01, 0x06), self._rx)
+        if not recv:
+            return False
+        self._log('Recv:', recv)
+
+        return True
+
+    def print(self, image: list[bytes]) -> bool:
+        valid = self.validate_for_printing(image)
+        self._log('Validation:', valid[0])
+        if not valid[0]:
+            return False
+
+        if len(image) % 2:
+            self._log('Lines of the image must be a multiple of 2')
+            image.append(b'\00' * 8)
+
+        # Get ready
+        recv = self.get_ready()
+        self._log('Get ready:', recv)
+        if not recv:
+            return False
+
+        for i in range(0, len(image), 2):
+            buf = p(0xf0, 0x5c) + image[i] + image[i+1]
+            self._log('Send:', hexstr(buf))
+            self._central.write(self._tx, buf)
+
+            if i > 0 and (i+2) // 2 % 6 == 0:
+                self._log('Wait for a notification...')
+                self._central.wait_notification(self._rx)
+            else:
+                time.sleep_ms(20)
+
+        # End sending lines
+        recv = self._central.write_wait_notification(self._tx, p(0xf0, 0x5d, 0x00), self._rx)
+        self._log('End sending lines:', hexstr(recv))
+
+        self._log('Waiting for the print to finish...')
+        done = False
+        while not done:
+            recv = self._central.write_wait_notification(self._tx, p(0xf0, 0x5e), self._rx)
+            if len(recv) < 4:
+                self._log('Received an invalid reply:', hexstr(recv))
+                return False
+            done = recv[2] == 0x01
+
+        self._log('Done!')
+        return True
+
+    @staticmethod
+    def validate(pixels: list[bytes]) -> tuple[bool, str]:
+        """Validates the image if ...
+        1. it has at least one pixel
+        2. all lines are the same length
+        """
+
+        if len(pixels) == 0:
+            return False, 'has no pixels'
+
+        width = len(pixels[0])
+        for line in pixels:
+            if len(line) != width:
+                return False, 'line lengths are not uniform'
+
+        return True, ''
+
+    @staticmethod
+    def validate_for_printing(pixels: list[bytes]) -> (bool, str):
+        """Validates the image if ...
+        1. it has at least 84 lines
+        2. all lines are 64 pixel length
+        """
+
+        if len(pixels) < 84:
+            return False, 'has no enough lines'
+
+        for line in pixels:
+            if len(line) != 8:  # 8 Bytes = 64 bits (one line)
+                return False, 'line lengths are not uniform'
+
+        return True, ''
+
+
 def main():
-    ble = bluetooth.BLE()
-    central = BLESimpleCentral(ble, debug=True)
-
-    # Scan and find a TEPRA Lite
-    while not central.scan():
-        print('TEPRA Lite was not found, rescanning...')
-
-    # Connect to it
-    success = central.connect()
-    if not success:
-        print('Failed to connect to the TEPRA Lite, resetting...')
+    tepra = Tepra(debug=True)
+    if not tepra.connect():
+        print('Failed to connect, resetting')
         machine.reset()
 
-    # Discover all services
-    svcs = central.discover_services()
-    if not svcs:
-        print('Failed to discover any service of TEPRA Lite, resetting...')
-        machine.reset()
+    image = []
+    for _ in range(42):
+        image.append(b'\x11\x11\x11\x11\x11\x11\x11\x11')
+        image.append(b'\x00\x00\x00\x00\x00\x00\x00\x00')
 
-    # Discover all characteristics in all services
-    chrs = []
-    for svc in svcs:
-        chrs.append(central.discover_characteristics(svc))
+    battery = tepra.fetch_remaining_battery()
+    print('Battery: {}'.format(battery))
 
-    if not chrs:
-        print('Failed to discover any characteristic of the service, resetting...')
-        machine.reset()
-
-    # Discover all descriptors in all services
-    descs = []
-    for svc in svcs:
-        descs.append(central.discover_descriptors(svc))
-
-    if len(chrs) < 2:
-        print('Insufficient number of characteristics, resetting...')
-        machine.reset()
-
-    print('Successfully connected')
-
-    # Look for known characteristics
-    tepra_battery = lookup_characteristic(chrs, bluetooth.UUID(0x2a19))
-    tepra_tx = lookup_characteristic(chrs, bluetooth.UUID(0xfff2))
-    tepra_rx = lookup_characteristic(chrs, bluetooth.UUID(0xfff1))
-
-    if tepra_tx is None or tepra_rx is None:
-        print('Failed to lookup the printer status characteristic, resetting...')
-        machine.reset()
-
-    print('Battery:', tepra_battery)
-    print('TX:', tepra_tx)
-    print('RX:', tepra_rx)
-
-    # Read remaining battery percentage
-    recv = central.read(tepra_battery)
-    if recv is None or len(recv) < 1:
-        print('Failed to read the battery information, resetting...')
-        machine.reset()
-
-    print('Remaining battery: {}%'.format(recv[0]))
-
-    # Set CCCD of RX characteristics
-    central.write_cccd(tepra_rx, False, True)
-
-    # Initiate
-    recv = central.write_wait_notification(tepra_tx, b'\xf0\x5a', tepra_rx)
-    print('Received:', hexstr(recv))
-
-    # Start printing
-    recv = central.write_wait_notification(tepra_tx, p(0xf0, 0x5b, 0x01, 0x06), tepra_rx)
-    print('Received:', hexstr(recv))
-
-    count = 0
-    x, y = p(0xff, 0x00) * 8, p(0x00, 0xff) * 8
-    for _ in range(7):
-        for _ in range(6):
-            buf = p(0xf0, 0x5c) + (x if count & 0x4 > 0 else y)
-            print('Sending:', hexstr(buf))
-            central.write(tepra_tx, buf)
-            count += 1
-            time.sleep_ms(20)
-        print('Wait for notification...')
-        recv = central.wait_notification(tepra_rx)
-        print('Received:', hexstr(recv))
-
-    print('Sending:', hexstr(p(0xf0, 0x5d, 0x00)))
-    recv = central.write_wait_notification(tepra_tx, p(0xf0, 0x5d, 0x00), tepra_rx)
-    print('Received:', hexstr(recv))
-
-    for _ in range(79):
-        recv = central.write_wait_notification(tepra_tx, p(0xf0, 0x5e), tepra_rx)
-        print('Received:', hexstr(recv))
-
-    return central, svcs, chrs, descs
+    print('Now printing...')
+    tepra.print(image)
