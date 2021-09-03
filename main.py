@@ -198,7 +198,7 @@ class BLESimpleCentral:
                 self._ble.gap_scan(None)  # Stop scanning
 
         elif event == _IRQ_SCAN_DONE:
-            self._log("Scanning done")
+            self._log('Scanning done')
             if self._scan_callback:
                 self._scan_callback(self._addr is not None)
 
@@ -206,11 +206,11 @@ class BLESimpleCentral:
             # Connected successfully
             conn_handle, addr_type, addr = data
             if addr_type == self._addr_type and addr == self._addr:
-                self._log("Connected")
+                self._log('Connected')
                 self._conn_handle = conn_handle
 
         elif event == _IRQ_PERIPHERAL_DISCONNECT:
-            self._log("Disconnected")
+            self._log('Disconnected')
             # Disconnected (either initiated by us or the remote end)
             conn_handle, _, _ = data
             if conn_handle == self._conn_handle:
@@ -224,7 +224,7 @@ class BLESimpleCentral:
                 self._svc_scan_callback(start_handle, end_handle, uuid)
 
         elif event == _IRQ_GATTC_SERVICE_DONE:
-            self._log("Discovering service done")
+            self._log('Discovering service done')
             # Service query complete
             if self._svc_done_callback is not None:
                 self._svc_done_callback()
@@ -236,7 +236,7 @@ class BLESimpleCentral:
                 self._chr_scan_callback(Characteristic(def_handle, value_handle, properties, uuid))
 
         elif event == _IRQ_GATTC_CHARACTERISTIC_DONE:
-            self._log("Discovering characteristics done")
+            self._log('Discovering characteristics done')
             # Characteristic query complete
             if self._chr_done_callback is not None:
                 self._chr_done_callback()
@@ -248,7 +248,7 @@ class BLESimpleCentral:
                 self._desc_scan_callback(dsc_handle, uuid)
 
         elif event == _IRQ_GATTC_DESCRIPTOR_DONE:
-            self._log("Discovering descriptor done")
+            self._log('Discovering descriptor done')
             # Descriptor query complete
             if self._desc_done_callback is not None:
                 self._desc_done_callback()
@@ -259,19 +259,19 @@ class BLESimpleCentral:
                 self._read_callback(char_data)
 
         elif event == _IRQ_GATTC_READ_DONE:
-            self._log("Reading characteristics done")
+            self._log('Reading characteristics done')
             conn_handle, value_handle, status = data
             if conn_handle == self._conn_handle:
                 self._read_done_callback()
 
         elif event == _IRQ_GATTC_WRITE_DONE:
-            self._log("Writing characteristics done")
+            self._log('Writing characteristics done')
             conn_handle, value_handle, status = data
             if conn_handle == self._conn_handle:
                 self._write_done_callback(value_handle, status)
 
         elif event == _IRQ_GATTC_NOTIFY:
-            self._log("Notification received")
+            self._log('Notification received')
             conn_handle, value_handle, data = data
             if conn_handle == self._conn_handle:
                 if self._notify_callback is not None:
@@ -443,7 +443,7 @@ class BLESimpleCentral:
         if self._conn_handle is None:
             return
 
-        self._log("Writing without response")
+        self._log('Writing without response')
         self._ble.gattc_write(self._conn_handle, c.value_handle, data, 0)
         return
 
@@ -464,7 +464,7 @@ class BLESimpleCentral:
 
         self._write_done_callback = callback_done
 
-        self._log("Writing with response")
+        self._log('Writing with response')
         self._ble.gattc_write(self._conn_handle, c.value_handle, data, 1)
 
         while not done:
