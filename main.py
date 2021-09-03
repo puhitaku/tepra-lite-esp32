@@ -13,12 +13,17 @@ from nanoweb.nanoweb import Nanoweb
 
 # Models
 class Print:
+    id: int
     dimension: Tuple[int, int]
     done: bool
 
-    def __init__(self, dimension, done):
+    def __init__(self, pid, dimension, done):
+        self.id = pid
         self.dimension = dimension
         self.done = done
+
+    def to_dict(self):
+        return {'id': self.id, 'width': self.dimension[0], 'height': self.dimension[1], 'done': self.done}
 
 
 app = Nanoweb()
@@ -99,7 +104,10 @@ async def handle_battery(req):
 @respond
 async def handle_prints(req):
     if req.method == 'GET':
-        return 200, Response(prints=prints)
+        prints_dicts = []
+        for p in prints.values():
+            prints_dicts.append(p.to_dict())
+        return 200, Response(prints=prints_dicts)
     elif req.method == 'POST':
         typ = req.headers.get('Content-Type', '')
         if typ != 'application/json':
@@ -133,12 +141,15 @@ async def handle_prints(req):
         else:
             last_print_id = list(prints.items())[-1][0]
             print_id = last_print_id + 1
-        prints[print_id] = Print((len(image), 64), False)
+
+        prints[print_id] = Print(print_id, (len(image), 64), False)
 
         success = t.print(image)
         if not success:
+            prints[print_id].done = True
             return 500, Response(error='failed to print')
 
+        prints[print_id].done = True
         return 200, Response()
     else:
         return 405, Response(error='method not allowed')
