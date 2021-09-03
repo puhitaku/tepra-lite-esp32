@@ -638,12 +638,12 @@ class Tepra:
     def disconnect(self):
         raise NotImplementedError
 
-    def fetch_remaining_battery(self) -> int:
+    def fetch_remaining_battery(self) -> (bool, int):
         recv = self._central.read(self._battery_chr)
         if recv is None or len(recv) < 1:
-            self._log('Failed to read the battery information, resetting...')
-            return False
-        return recv[0]
+            self._log('Failed to read the battery information')
+            return False, 0
+        return True, recv[0]
 
     def get_ready(self) -> bool:
         recv = self._central.write_wait_notification(self._tx, b'\xf0\x5a', self._rx)
@@ -746,7 +746,9 @@ def main():
         image.append(b'\x11\x11\x11\x11\x11\x11\x11\x11')
         image.append(b'\x00\x00\x00\x00\x00\x00\x00\x00')
 
-    battery = tepra.fetch_remaining_battery()
+    success, battery = tepra.fetch_remaining_battery()
+    if not success:
+        return
     print('Battery: {}'.format(battery))
 
     print('Now printing...')
