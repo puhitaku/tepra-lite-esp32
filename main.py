@@ -1,4 +1,5 @@
 import binascii
+import gc
 import json
 import machine
 import time
@@ -8,6 +9,7 @@ from ucollections import OrderedDict
 import tepra
 import wifi
 from typ1ng import Optional, Tuple
+from uqr.uQR import QRCode, ERROR_CORRECT_L, ERROR_CORRECT_M, ERROR_CORRECT_Q, ERROR_CORRECT_H
 from nanoweb.nanoweb import Nanoweb
 
 
@@ -103,6 +105,8 @@ async def handle_battery(req):
 @app.route('/prints')
 @respond
 async def handle_prints(req):
+    gc.collect()
+
     if req.method == 'GET':
         prints_dicts = []
         for p in prints.values():
@@ -126,15 +130,71 @@ async def handle_prints(req):
         except ValueError as e:
             return 400, Response(error='broken JSON: {}'.format(e))
 
-        image_raw = j.get('image')
-        if image_raw is None:
-            return 400, Response(error='JSON has no image key')
+        image_raw, qr_str = j.get('image'), j.get('qr')
+        if image_raw is None and qr_str is None:
+            return 400, Response(error='JSON has no printable data')
 
-        for i in range(0, len(image_raw), 16):
-            try:
-                image.append(binascii.unhexlify(image_raw[i:i+16]))
-            except ValueError as e:
-                return 400, Response(error='invalid hexstr: {}'.format(e))
+        del body
+        gc.collect()
+
+        if image_raw is not None:
+            for i in range(0, len(image_raw), 16):
+                try:
+                    image.append(binascii.unhexlify(image_raw[i:i+16]))
+                except ValueError as e:
+                    return 400, Response(error='invalid hexstr: {}'.format(e))
+        elif qr_str is not None:
+            error_correction = j.get('qr_error_correction', 'm')
+            if error_correction == 'l':
+                qr = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_L)
+            elif error_correction == 'm':
+                qr = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_M)
+            elif error_correction == 'q':
+                qr = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_Q)
+            elif error_correction == 'h':
+                qr = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_H)
+            else:
+                return 400, Response(error='invalid error correction level: ' + error_correction)
+
+            log('QR string: {}', qr_str)
+            log('Error correction level: {}', error_correction.upper())
+
+            qr.add_data(qr_str)
+            mat = qr.get_matrix()
+
+            del j, error_correction, qr
+            gc.collect()
+
+            width = len(mat[0])
+            log('QR code width (original): {}', width)
+            if width > 64:
+                log('Exceeds 64px')
+                return 400, Response(
+                    error='width of QR code ({}px) exceeds 64px, try using lower error correction level' .format(width)
+                )
+            scale = 64 // width
+            log('QR code width (scaled): {}', width * scale)
+
+            rotated_qr = []
+
+            for y in range(width):
+                aggregated = 0
+                for x in range(width):
+                    for i in range(scale):
+                        aggregated += 1 << (x * scale + i) if mat[x][y] else 0
+                aggregated <<= (64 - width * scale) // 2
+                for _ in range(scale):
+                    log("QR: {:016x}", aggregated)
+                    rotated_qr.append(aggregated.to_bytes(8, 'big'))
+
+            border = (84 - len(rotated_qr)) // 2 + 1
+            border = max(border, 8)  # Leave at least 8 lines for reliable printing and decoding
+            spacing = [0] * 8
+            for _ in range(border):
+                rotated_qr.insert(0, spacing)
+                rotated_qr.append(spacing)
+
+            image = [bytes(r) for r in rotated_qr]
 
         if len(prints) == 0:
             print_id = 0
@@ -144,10 +204,10 @@ async def handle_prints(req):
 
         prints[print_id] = Print(print_id, (len(image), 64), False)
 
-        success = t.print(image)
+        success, reason = t.print(image)
         if not success:
             prints[print_id].done = True
-            return 500, Response(error='failed to print')
+            return 500, Response(error='failed to print: ' + reason)
 
         prints[print_id].done = True
         return 200, Response()
