@@ -1,3 +1,6 @@
 [submodule "nanoweb"]
 	path = nanoweb
 	url = https://github.com/hugokernel/micropython-nanoweb.git
+[submodule "uqr"]
+	path = uqr
+	url = https://github.com/puhitaku/uQR.git
