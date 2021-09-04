@@ -658,11 +658,11 @@ class Tepra:
 
         return True
 
-    def print(self, image: list[bytes]) -> bool:
+    def print(self, image: list[bytes]) -> (bool, str):
         valid = self.validate_for_printing(image)
         self._log('Validation:', valid[0])
         if not valid[0]:
-            return False
+            return False, valid[1]
 
         if len(image) % 2:
             self._log('Lines of the image must be a multiple of 2')
@@ -672,7 +672,7 @@ class Tepra:
         recv = self.get_ready()
         self._log('Get ready:', recv)
         if not recv:
-            return False
+            return False, 'failed to get ready'
 
         for i in range(0, len(image), 2):
             buf = p(0xf0, 0x5c) + image[i] + image[i+1]
@@ -695,11 +695,11 @@ class Tepra:
             recv = self._central.write_wait_notification(self._tx, p(0xf0, 0x5e), self._rx)
             if len(recv) < 4:
                 self._log('Received an invalid reply:', hexstr(recv))
-                return False
+                return False, 'received an invalid reply: ' + hexstr(recv)
             done = recv[2] == 0x01
 
         self._log('Done!')
-        return True
+        return True, ''
 
     @staticmethod
     def validate(pixels: list[bytes]) -> tuple[bool, str]:
