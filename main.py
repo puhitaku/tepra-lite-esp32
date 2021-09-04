@@ -131,6 +131,9 @@ async def handle_prints(req):
 
     body = await req.read(int(content_len))
 
+    del typ, content_len
+    gc.collect()
+
     try:
         j = json.loads(body.decode())
     except ValueError as e:
@@ -161,6 +164,9 @@ async def handle_prints(req):
                 return 400, Response(error='part {}: space has no "length" key'.format(pi))
             rendered.append([b'\x00' * 8] * length)
 
+            del length
+            gc.collect()
+
         if typ == 'image':
             image = p.get('image')
             if image is None:
@@ -175,6 +181,9 @@ async def handle_prints(req):
                     log('part {}: invalid hexstr: {}', pi, e)
                     return 400, Response(error='invalid hexstr: {}'.format(e))
             rendered.append(buf)
+
+            del image, buf
+            gc.collect()
 
         elif typ == 'qr':
             qr_str = p.get('string')
@@ -234,6 +243,9 @@ async def handle_prints(req):
                 rotated_qr.append(spacing)
 
             rendered.append([bytes(r) for r in rotated_qr])
+
+            del width, scale, aggregated, border, spacing, rotated_qr, mat
+            gc.collect()
 
     if len(prints) == 0:
         print_id = 0
