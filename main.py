@@ -9,6 +9,9 @@ from ucollections import OrderedDict
 import tepra
 import wifi
 from typ1ng import Optional, Tuple
+
+gc.collect()
+
 from uqr.uQR import QRCode, ERROR_CORRECT_L, ERROR_CORRECT_M, ERROR_CORRECT_Q, ERROR_CORRECT_H
 from nanoweb.nanoweb import Nanoweb
 
@@ -16,16 +19,16 @@ from nanoweb.nanoweb import Nanoweb
 # Models
 class Print:
     id: int
-    dimension: Tuple[int, int]
+    size: Tuple[int, int]
     done: bool
 
-    def __init__(self, pid, dimension, done):
+    def __init__(self, pid, size, done):
         self.id = pid
-        self.dimension = dimension
+        self.size = size
         self.done = done
 
     def to_dict(self):
-        return {'id': self.id, 'width': self.dimension[0], 'height': self.dimension[1], 'done': self.done}
+        return {'id': self.id, 'width': self.size[0], 'height': self.size[1], 'done': self.done}
 
 
 app = Nanoweb()
@@ -107,62 +110,98 @@ async def handle_battery(req):
 async def handle_prints(req):
     gc.collect()
 
+    if req.method not in ('GET', 'POST'):
+        return 405, Response(error='method not allowed')
+
     if req.method == 'GET':
         prints_dicts = []
         for p in prints.values():
             prints_dicts.append(p.to_dict())
         return 200, Response(prints=prints_dicts)
-    elif req.method == 'POST':
-        typ = req.headers.get('Content-Type', '')
-        if typ != 'application/json':
-            return 400, Response(error='bad request, invalid content type')
 
-        content_len = req.headers.get('Content-Length', 0)
-        if content_len == 0:
-            return 400, Response(error='bad request, content length is not specified or zero')
+    typ = req.headers.get('Content-Type', '')
+    if typ != 'application/json':
+        log('bad request, invalid content type')
+        return 400, Response(error='bad request, invalid content type')
 
-        body = await req.read(int(content_len))
+    content_len = req.headers.get('Content-Length', 0)
+    if content_len == 0:
+        log('bad request, content length is not specified or zero')
+        return 400, Response(error='bad request, content length is not specified or zero')
 
-        image = []
+    body = await req.read(int(content_len))
 
-        try:
-            j = json.loads(body.decode())
-        except ValueError as e:
-            return 400, Response(error='broken JSON: {}'.format(e))
+    try:
+        j = json.loads(body.decode())
+    except ValueError as e:
+        log('bad request, broken JSON: {}', e)
+        return 400, Response(error='bad request, broken JSON: {}'.format(e))
 
-        image_raw, qr_str = j.get('image'), j.get('qr')
-        if image_raw is None and qr_str is None:
-            return 400, Response(error='JSON has no printable data')
+    del body
+    gc.collect()
 
-        del body
-        gc.collect()
+    parts = j.get('parts')
 
-        if image_raw is not None:
-            for i in range(0, len(image_raw), 16):
+    if parts is None:
+        log('bad request, JSON has no "parts" key')
+        return 400, Response(error='bad request, JSON has no "parts" key')
+
+    rendered = []
+
+    for pi, p in enumerate(parts):
+        typ = p.get('type')
+        if typ not in ('space', 'image', 'qr'):
+            log('part {}: this part has no printable data', pi)
+            return 400, Response(error='part {} has no printable data'.format(pi))
+
+        if typ == 'space':
+            length = p.get('length')
+            if length is None or not isinstance(length, int):
+                log('part {}: space has no "length" key', pi)
+                return 400, Response(error='part {}: space has no "length" key'.format(pi))
+            rendered.append([b'\x00' * 8] * length)
+
+        if typ == 'image':
+            image = p.get('image')
+            if image is None:
+                log('part {}: image has no "image" key', pi)
+                return 400, Response(error='part {}: image has no "image" key'.format(pi))
+
+            buf = []
+            for i in range(0, len(image), 16):
                 try:
-                    image.append(binascii.unhexlify(image_raw[i:i+16]))
+                    buf.append(binascii.unhexlify(image[i:i+16]))
                 except ValueError as e:
+                    log('part {}: invalid hexstr: {}', pi, e)
                     return 400, Response(error='invalid hexstr: {}'.format(e))
-        elif qr_str is not None:
-            error_correction = j.get('qr_error_correction', 'm')
+            rendered.append(buf)
+
+        elif typ == 'qr':
+            qr_str = p.get('string')
+            if qr_str is None:
+                log('part {}: QR has no "string" key', pi)
+                return 400, Response(error='part {}: QR has no "string" key'.format(pi))
+
+            error_correction = p.get('qr_error_correction', 'm')
             if error_correction == 'l':
-                qr = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_L)
+                qrc = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_L)
             elif error_correction == 'm':
-                qr = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_M)
+                qrc = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_M)
             elif error_correction == 'q':
-                qr = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_Q)
+                qrc = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_Q)
             elif error_correction == 'h':
-                qr = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_H)
+                qrc = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_H)
             else:
+                log('part {}: invalid error correction level: {}', pi, error_correction)
                 return 400, Response(error='invalid error correction level: ' + error_correction)
 
             log('QR string: {}', qr_str)
             log('Error correction level: {}', error_correction.upper())
 
-            qr.add_data(qr_str)
-            mat = qr.get_matrix()
+            qrc.add_data(qr_str)
+            mat = qrc.get_matrix()
 
-            del j, error_correction, qr
+            del p, qr_str, error_correction, qrc
             gc.collect()
 
             width = len(mat[0])
@@ -194,25 +233,27 @@ async def handle_prints(req):
                 rotated_qr.insert(0, spacing)
                 rotated_qr.append(spacing)
 
-            image = [bytes(r) for r in rotated_qr]
+            rendered.append([bytes(r) for r in rotated_qr])
 
-        if len(prints) == 0:
-            print_id = 0
-        else:
-            last_print_id = list(prints.items())[-1][0]
-            print_id = last_print_id + 1
-
-        prints[print_id] = Print(print_id, (len(image), 64), False)
-
-        success, reason = t.print(image)
-        if not success:
-            prints[print_id].done = True
-            return 500, Response(error='failed to print: ' + reason)
-
-        prints[print_id].done = True
-        return 200, Response()
+    if len(prints) == 0:
+        print_id = 0
     else:
-        return 405, Response(error='method not allowed')
+        last_print_id = list(prints.items())[-1][0]
+        print_id = last_print_id + 1
+
+    merged = []
+    for r in rendered:
+        log('Merging {} lines', len(r))
+        merged += r
+
+    prints[print_id] = Print(print_id, (64, len(merged)), False)
+    log('Print: ID={}, width=64, height={}', print_id, len(merged))
+
+    success, reason = t.print(merged)
+    prints[print_id].done = True
+    if not success:
+        return 500, Response(error='failed to print: ' + reason)
+    return 200, Response()
 
 
 # Read the config
@@ -239,4 +280,3 @@ log('Launching the Tepra API')
 loop = uasyncio.get_event_loop()
 loop.create_task(app.run())
 loop.run_forever()
-
