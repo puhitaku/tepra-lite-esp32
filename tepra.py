@@ -668,6 +668,8 @@ class Tepra:
             self._log('Lines of the image must be a multiple of 2')
             image.append(b'\00' * 8)
 
+        image = [bytes([b[6], b[7], b[4], b[5], b[2], b[3], b[0], b[1]]) for b in image]
+
         # Get ready
         recv = self.get_ready()
         self._log('Get ready:', recv)
