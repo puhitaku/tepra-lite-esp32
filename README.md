@@ -1,8 +1,8 @@
 # tepra-lite-esp32
 
-*MicroPython module to communicate with KING JIM TEPRA Lite LR30 as a result of reverse engineering.*
+*MicroPython module to communicate with KING JIM TEPRA Lite LR30*
 
-Print anything you want to. Print via any interface you have. It's also capable of printing automatically-generated images on your ESP32.
+This is a reverse-engineered module to communicate with LR30. Print anything you want to. Print via any interface you have. It's also capable of printing automatically-generated QR code on your ESP32.
 
 
 ## Prerequisites
@@ -16,7 +16,29 @@ Print anything you want to. Print via any interface you have. It's also capable 
 
 ## Installing
 
-TODO
+1. Fill the SSID and PSK in config.json.
+
+2. Put all files into your ESP32 with adafruit-ampy.
+
+    ```
+    ampy --port /path/to/the/usb/serial put ble_advertising.py
+    ampy --port /path/to/the/usb/serial put main.py
+    ampy --port /path/to/the/usb/serial put tepra.py
+    ampy --port /path/to/the/usb/serial put typ1ng.py
+    ampy --port /path/to/the/usb/serial put bluetooth.pyi
+    ampy --port /path/to/the/usb/serial put time.pyi
+    ampy --port /path/to/the/usb/serial put nanoweb
+    ampy --port /path/to/the/usb/serial put uqr/uQR.py uqr/uQR.py
+    ampy --port /path/to/the/usb/serial put config.json
+    ```
+
+3. The main function will be invoked on boot automatically.
+
+
+## TODOs
+
+ - Output reverse-engineered BLE services/characteristics
+ - Describe API spec
 
 
 ## Why?
