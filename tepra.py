@@ -3,7 +3,7 @@
 
 import binascii
 import bluetooth
-import machine
+import gc
 import time
 from ble_advertising import decode_name
 from micropython import const
@@ -658,17 +658,14 @@ class Tepra:
 
         return True
 
-    def print(self, image: list[bytes]) -> (bool, str):
-        valid = self.validate_for_printing(image)
-        self._log('Validation:', valid[0])
-        if not valid[0]:
-            return False, valid[1]
+    def print(self, b: bytes) -> (bool, str):
+        ret = self._print(b)
+        gc.collect()
+        return ret
 
-        if len(image) % 2:
-            self._log('Lines of the image must be a multiple of 2')
-            image.append(b'\00' * 8)
-
-        image = [bytes([b[6], b[7], b[4], b[5], b[2], b[3], b[0], b[1]]) for b in image]
+    def _print(self, b: bytes) -> (bool, str):
+        if len(b) % 16 != 0:
+            return False, "malformed data: insufficient length"
 
         # Get ready
         recv = self.get_ready()
@@ -676,16 +673,30 @@ class Tepra:
         if not recv:
             return False, 'failed to get ready'
 
-        for i in range(0, len(image), 2):
-            buf = p(0xf0, 0x5c) + image[i] + image[i+1]
+        i = 1
+        err = ""
+
+        for ofs in range(0, len(b)-1, 16):
+            # Print until EOF
+            # The stream returns 16 bytes or shorter bytes if there are no body to read
+
+            buf = bytes((
+                0xf0,
+                0x5c,
+                b[ofs+6], b[ofs+7], b[ofs+4], b[ofs+5], b[ofs+2], b[ofs+3], b[ofs+0], b[ofs+1],
+                b[ofs+14], b[ofs+15], b[ofs+12], b[ofs+13], b[ofs+10], b[ofs+11], b[ofs+8], b[ofs+9],
+            ))
+
             self._log('Send:', hexstr(buf))
             self._central.write(self._tx, buf)
 
-            if i > 0 and (i+2) // 2 % 6 == 0:
+            if i % 6 == 0:
                 self._log('Wait for a notification...')
                 self._central.wait_notification(self._rx)
             else:
                 time.sleep_ms(20)
+
+            i += 1
 
         # End sending lines
         recv = self._central.write_wait_notification(self._tx, p(0xf0, 0x5d, 0x00), self._rx)
@@ -701,7 +712,7 @@ class Tepra:
             done = recv[2] == 0x01
 
         self._log('Done!')
-        return True, ''
+        return True, err
 
     @staticmethod
     def validate(pixels: list[bytes]) -> tuple[bool, str]:
@@ -735,23 +746,3 @@ class Tepra:
                 return False, 'line lengths are not uniform'
 
         return True, ''
-
-
-def main():
-    tepra = Tepra(debug=True)
-    if not tepra.connect():
-        print('Failed to connect, resetting')
-        machine.reset()
-
-    image = []
-    for _ in range(42):
-        image.append(b'\x11\x11\x11\x11\x11\x11\x11\x11')
-        image.append(b'\x00\x00\x00\x00\x00\x00\x00\x00')
-
-    success, battery = tepra.fetch_remaining_battery()
-    if not success:
-        return
-    print('Battery: {}'.format(battery))
-
-    print('Now printing...')
-    tepra.print(image)

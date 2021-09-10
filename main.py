@@ -1,10 +1,9 @@
-import binascii
 import gc
 import json
 import machine
 import time
 import uasyncio
-from ucollections import OrderedDict
+import zlib
 
 from nanoweb.nanoweb import Nanoweb
 
@@ -28,7 +27,6 @@ class Print:
 
 
 app = Nanoweb()
-prints = OrderedDict()
 
 
 def log(fmt, *args):
@@ -109,94 +107,20 @@ async def handle_prints(req):
     if req.method not in ('GET', 'POST'):
         return 405, Response(error='method not allowed')
 
-    if req.method == 'GET':
-        prints_dicts = []
-        for p in prints.values():
-            prints_dicts.append(p.to_dict())
-        return 200, Response(prints=prints_dicts)
-
     typ = req.headers.get('Content-Type', '')
-    if typ != 'application/json':
+    if typ != 'application/octet-stream':
         log('bad request, invalid content type')
         return 400, Response(error='bad request, invalid content type')
 
-    content_len = req.headers.get('Content-Length', 0)
-    if content_len == 0:
+    content_len = req.headers.get('Content-Length')
+    if content_len is None:
         log('bad request, content length is not specified or zero')
         return 400, Response(error='bad request, content length is not specified or zero')
 
-    body = await req.read(int(content_len))
+    # stream.set_stream(req)
+    body = zlib.decompress(await req.read(int(content_len)))
 
-    del typ, content_len
-    gc.collect()
-
-    try:
-        j = json.loads(body.decode())
-    except ValueError as e:
-        log('bad request, broken JSON: {}', e)
-        return 400, Response(error='bad request, broken JSON: {}'.format(e))
-
-    del body
-    gc.collect()
-
-    parts = j.get('parts')
-
-    if parts is None:
-        log('bad request, JSON has no "parts" key')
-        return 400, Response(error='bad request, JSON has no "parts" key')
-
-    rendered = []
-
-    for pi, p in enumerate(parts):
-        typ = p.get('type')
-        if typ not in ('space', 'image'):
-            log('part {}: this part has no printable data', pi)
-            return 400, Response(error='part {} has no printable data'.format(pi))
-
-        if typ == 'space':
-            length = p.get('length')
-            if length is None or not isinstance(length, int):
-                log('part {}: space has no "length" key', pi)
-                return 400, Response(error='part {}: space has no "length" key'.format(pi))
-            rendered.append([b'\x00' * 8] * length)
-
-            del length
-            gc.collect()
-
-        if typ == 'image':
-            image = p.get('image')
-            if image is None:
-                log('part {}: image has no "image" key', pi)
-                return 400, Response(error='part {}: image has no "image" key'.format(pi))
-
-            buf = []
-            for i in range(0, len(image), 16):
-                try:
-                    buf.append(binascii.unhexlify(image[i:i+16]))
-                except ValueError as e:
-                    log('part {}: invalid hexstr: {}', pi, e)
-                    return 400, Response(error='invalid hexstr: {}'.format(e))
-            rendered.append(buf)
-
-            del image, buf
-            gc.collect()
-
-    if len(prints) == 0:
-        print_id = 0
-    else:
-        last_print_id = list(prints.items())[-1][0]
-        print_id = last_print_id + 1
-
-    merged = []
-    for r in rendered:
-        log('Merging {} lines', len(r))
-        merged += r
-
-    prints[print_id] = Print(print_id, (64, len(merged)), False)
-    log('Print: ID={}, width=64, height={}', print_id, len(merged))
-
-    success, reason = t.print(merged)
-    prints[print_id].done = True
+    success, reason = t.print(body)
     if not success:
         return 500, Response(error='failed to print: ' + reason)
     return 200, Response()
@@ -207,8 +131,8 @@ with open('config.json', 'r') as f:
     conf = json.load(f)
 
 # Bring up the Wi-Fi
-success = wifi.up(conf['ssid'], conf['psk'])
-if not success:
+ok = wifi.up(conf['ssid'], conf['psk'])
+if not ok:
     log('Failed to establish a Wi-Fi connection, resetting')
     machine.reset()
 
