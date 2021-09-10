@@ -6,17 +6,13 @@ import time
 import uasyncio
 from ucollections import OrderedDict
 
+from nanoweb.nanoweb import Nanoweb
+
 import tepra
 import wifi
 from typ1ng import Optional, Tuple
 
-gc.collect()
 
-from uqr.uQR import QRCode, ERROR_CORRECT_L, ERROR_CORRECT_M, ERROR_CORRECT_Q, ERROR_CORRECT_H
-from nanoweb.nanoweb import Nanoweb
-
-
-# Models
 class Print:
     id: int
     size: Tuple[int, int]
@@ -153,7 +149,7 @@ async def handle_prints(req):
 
     for pi, p in enumerate(parts):
         typ = p.get('type')
-        if typ not in ('space', 'image', 'qr'):
+        if typ not in ('space', 'image'):
             log('part {}: this part has no printable data', pi)
             return 400, Response(error='part {} has no printable data'.format(pi))
 
@@ -183,68 +179,6 @@ async def handle_prints(req):
             rendered.append(buf)
 
             del image, buf
-            gc.collect()
-
-        elif typ == 'qr':
-            qr_str = p.get('string')
-            if qr_str is None:
-                log('part {}: QR has no "string" key', pi)
-                return 400, Response(error='part {}: QR has no "string" key'.format(pi))
-
-            error_correction = p.get('qr_error_correction', 'm')
-            if error_correction == 'l':
-                qrc = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_L)
-            elif error_correction == 'm':
-                qrc = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_M)
-            elif error_correction == 'q':
-                qrc = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_Q)
-            elif error_correction == 'h':
-                qrc = QRCode(version=1, border=0, error_correction=ERROR_CORRECT_H)
-            else:
-                log('part {}: invalid error correction level: {}', pi, error_correction)
-                return 400, Response(error='invalid error correction level: ' + error_correction)
-
-            log('QR string: {}', qr_str)
-            log('Error correction level: {}', error_correction.upper())
-
-            qrc.add_data(qr_str)
-            mat = qrc.get_matrix()
-
-            del p, qr_str, error_correction, qrc
-            gc.collect()
-
-            width = len(mat[0])
-            log('QR code width (original): {}', width)
-            if width > 64:
-                log('Exceeds 64px')
-                return 400, Response(
-                    error='width of QR code ({}px) exceeds 64px, try using lower error correction level' .format(width)
-                )
-            scale = 64 // width
-            log('QR code width (scaled): {}', width * scale)
-
-            rotated_qr = []
-
-            for y in range(width):
-                aggregated = 0
-                for x in range(width):
-                    for i in range(scale):
-                        aggregated += 1 << (x * scale + i) if mat[x][y] else 0
-                aggregated <<= (64 - width * scale) // 2
-                for _ in range(scale):
-                    log("QR: {:016x}", aggregated)
-                    rotated_qr.append(aggregated.to_bytes(8, 'big'))
-
-            border = (84 - len(rotated_qr)) // 2 + 1
-            border = max(border, 8)  # Leave at least 8 lines for reliable printing and decoding
-            spacing = [0] * 8
-            for _ in range(border):
-                rotated_qr.insert(0, spacing)
-                rotated_qr.append(spacing)
-
-            rendered.append([bytes(r) for r in rotated_qr])
-
-            del width, scale, aggregated, border, spacing, rotated_qr, mat
             gc.collect()
 
     if len(prints) == 0:
