@@ -117,8 +117,10 @@ async def handle_prints(req):
         log('bad request, content length is not specified or zero')
         return 400, Response(error='bad request, content length is not specified or zero')
 
-    # stream.set_stream(req)
-    body = zlib.decompress(await req.read(int(content_len)))
+    zl = await req.read(int(content_len))
+    log('read from request body: {} bytes'.format(len(zl)))
+    body = zlib.decompress(zl)
+    log('decompressed: {} bytes'.format(len(body)))
 
     success, reason = t.print(body)
     if not success:
