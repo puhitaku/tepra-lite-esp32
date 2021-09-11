@@ -665,7 +665,7 @@ class Tepra:
 
     def _print(self, b: bytes) -> (bool, str):
         if len(b) % 16 != 0:
-            return False, "malformed data: insufficient length"
+            return False, "insufficient length, image data length must be aligned to 16"
 
         # Get ready
         recv = self.get_ready()
