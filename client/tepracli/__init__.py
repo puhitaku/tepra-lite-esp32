@@ -1,6 +1,4 @@
-import json
-from typing import Tuple, ContextManager
-from contextlib import contextmanager
+from typing import Tuple
 
 import requests
 
