@@ -21,15 +21,16 @@ This is a reverse-engineered module to communicate with LR30. Print anything you
 2. Put all files into your ESP32 with adafruit-ampy.
 
     ```
-    ampy --port /path/to/the/usb/serial put ble_advertising.py
-    ampy --port /path/to/the/usb/serial put main.py
-    ampy --port /path/to/the/usb/serial put tepra.py
-    ampy --port /path/to/the/usb/serial put typ1ng.py
-    ampy --port /path/to/the/usb/serial put bluetooth.pyi
-    ampy --port /path/to/the/usb/serial put time.pyi
-    ampy --port /path/to/the/usb/serial put nanoweb
-    ampy --port /path/to/the/usb/serial put uqr/uQR.py uqr/uQR.py
-    ampy --port /path/to/the/usb/serial put config.json
+    export PORT=/path/to/the/usb/serial
+    ampy --port ${PORT} put ble_advertising.py
+    ampy --port ${PORT} put bluetooth.pyi
+    ampy --port ${PORT} put config.json
+    ampy --port ${PORT} put main.py
+    ampy --port ${PORT} put nanoweb
+    ampy --port ${PORT} put tepra.py
+    ampy --port ${PORT} put time.pyi
+    ampy --port ${PORT} put typ1ng.py
+    ampy --port ${PORT} put wifi.py
     ```
 
 3. The main function will be invoked on boot automatically.
