@@ -1,11 +1,18 @@
-# tepra-lite-esp32
+<div align="center">
+  <img src="tepra.jpg" width="300px">
+  <h1>tepra-lite-esp32</h1>
+  <i>MicroPython module to communicate with KING JIM TEPRA Lite LR30</i>
+</div>
 
-*MicroPython module to communicate with KING JIM TEPRA Lite LR30*
 
-This is a reverse-engineered module to communicate with LR30. Print anything you want to. Print via any interface you have. It's also capable of printing automatically-generated QR code on your ESP32.
+## Preface
+
+This is a reverse-engineered module to communicate with KING JIM TEPRA Lite LR30. **A REST API server implemented in ESP32 + MicroPython** translates the image you requested into Bluetooth Low Energy communication.
+
+[client](/client) directory has an implementation of CLI to send requests to it.
 
 
-## Prerequisites
+## Requirements
 
  - ESP32
    - Developed on ESP-WROOM-32
@@ -55,13 +62,7 @@ This is a reverse-engineered module to communicate with LR30. Print anything you
     - See the README.md for the usage.
 
 
-## TODOs
-
- - Output reverse-engineered BLE services/characteristics
- - Describe API spec
-
-
-## Why?
+## Why ESP32 + MicroPython?
 
 Why I wrote this module in MicroPython is because it enriches the time of coding on microcontrollers. The simple and easy-to-use API of `ubluetooth` is also a prominently good point. It let me focus on high-level behavior of BLE stack and may help people who are interested in reverse engineering and re-implementing BLE communication.
 
