@@ -443,7 +443,7 @@ class BLESimpleCentral:
         if self._conn_handle is None:
             return
 
-        self._log('Writing without response')
+        self._log('Writing without response: {}'.format(hexstr(data)))
         self._ble.gattc_write(self._conn_handle, c.value_handle, data, 0)
         return
 
@@ -693,7 +693,6 @@ class Tepra:
                 b[ofs+14], b[ofs+15], b[ofs+12], b[ofs+13], b[ofs+10], b[ofs+11], b[ofs+8], b[ofs+9],
             ))
 
-            self._log('Send:', hexstr(buf))
             self._central.write(self._tx, buf)
 
             if i % 6 == 0:
