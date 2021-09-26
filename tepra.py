@@ -714,7 +714,7 @@ class Tepra:
             if len(recv) < 4:
                 self._log('Received an invalid reply:', hexstr(recv))
                 return False, 'received an invalid reply: ' + hexstr(recv)
-            done = recv[2] == 0x01
+            done = recv[2] != 0x01
 
         self._log('Done!')
         return True, err
