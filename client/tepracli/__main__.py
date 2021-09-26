@@ -30,18 +30,16 @@ class OrderedParamsCommand(click.Command):
 
 
 @click.group()
-@click.option('--address', '-a', required=True)
 @click.pass_context
-def cmd(ctx, address):
-    ctx.obj = {
-        'address': address
-    }
+def cmd(ctx):
+    ctx.obj = dict()
 
 
 @cmd.command()
+@click.option('--address', '-a', required=True, help='The address of TEPRA Lite LR30.')
 @click.pass_context
-def battery(ctx):
-    c = Client(ctx.obj['address'])
+def battery(ctx, address):
+    c = Client(address)
     bat, err = c.get_battery()
     if err:
         print(f'Failed to get remaining battery: {err}')
@@ -50,6 +48,7 @@ def battery(ctx):
 
 
 @cmd.command(name='print', cls=OrderedParamsCommand)
+@click.option('--address', '-a', required=True, help='The address of TEPRA Lite LR30.')
 @click.option('--preview', is_flag=True, help='Generate preview.png without printing.')
 @click.option('--font', '-f', help='Path or name of font. (default = bundled Adobe Source Sans)')
 @click.option('--fontsize', '-S', default=30, help='Font size. [px]')
@@ -58,7 +57,7 @@ def battery(ctx):
 @click.option('--space', '-s', multiple=True, help='Leave space between parts. [px]')
 @click.option('--qr', '-q', multiple=True, help='Draw a QR code.')
 @click.pass_context
-def do_print(ctx, preview, font, fontsize, depth, **_):
+def do_print(ctx, address, preview, font, fontsize, depth, **_):
     if ctx.obj.get('parts') is None:
         print('Please specify at least one part with -m/--message, -s/--space, and -q/--qr', file=sys.stderr)
         sys.exit(1)
@@ -136,7 +135,7 @@ def do_print(ctx, preview, font, fontsize, depth, **_):
         line = aggregated.to_bytes(8, 'big')
         encoded += line
 
-    c = Client(ctx.obj['address'])
+    c = Client(address)
 
     err = c.post_depth(depth)
     if err:
