@@ -36,6 +36,25 @@ This is a reverse-engineered module to communicate with LR30. Print anything you
 3. The main function will be invoked on boot automatically.
 
 
+## How to print
+
+1. [Install](#Installing) tepra-lite-esp32 into your ESP32.
+
+1. See [client](/client) for a CLI and install it.
+
+1. Turn on your TEPRA Lite LR30.
+
+1. Turn on your ESP32.
+
+    - It will connect to the AP you configured in config.json.
+    - Then it discovers an advertising LR30.
+    - After the connection process, it will print like `[12.48] Launching the Tepra API` and you're ready to proceed.
+
+1. Send requests to the ESP32 with [the client](/client).
+
+    - See the README.md for the usage.
+
+
 ## TODOs
 
  - Output reverse-engineered BLE services/characteristics
