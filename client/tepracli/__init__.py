@@ -22,6 +22,17 @@ class Client:
 
         return bat, ''
 
+    def post_depth(self, depth: int) -> str:
+        res = requests.post(
+            f'http://{self.origin}/depth',
+            json={'depth': depth}
+        )
+        j = res.json()
+        err = j.get('error', '')
+        if err:
+            return f'Printer returned an error: {err}'
+        return ''
+
     def post_print(self, compressed_image: bytes) -> str:
         res = requests.post(
             f'http://{self.origin}/prints',

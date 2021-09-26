@@ -645,30 +645,36 @@ class Tepra:
             return False, 0
         return True, recv[0]
 
-    def get_ready(self) -> bool:
+    def get_ready(self, depth=0) -> bool:
         recv = self._central.write_wait_notification(self._tx, b'\xf0\x5a', self._rx)
         if not recv:
             return False
-        self._log('Recv:', recv)
+        self._log('Recv:', hexstr(recv))
 
-        recv = self._central.write_wait_notification(self._tx, p(0xf0, 0x5b, 0x01, 0x06), self._rx)
+        if depth < -3 or depth > 3:
+            raise ValueError('invalid depth: {}'.format(depth))
+
+        d = 0x10 - depth if depth < 0 else 0x00 + depth
+        self._log('Depth: {} ({:02x})'.format(depth, d))
+
+        recv = self._central.write_wait_notification(self._tx, p(0xf0, 0x5b, d, 0x06), self._rx)
         if not recv:
             return False
-        self._log('Recv:', recv)
+        self._log('Recv:', hexstr(recv))
 
         return True
 
-    def print(self, b: bytes) -> (bool, str):
-        ret = self._print(b)
+    def print(self, b: bytes, d: int) -> (bool, str):
+        ret = self._print(b, d)
         gc.collect()
         return ret
 
-    def _print(self, b: bytes) -> (bool, str):
+    def _print(self, b: bytes, d: int) -> (bool, str):
         if len(b) % 16 != 0:
             return False, "insufficient length, image data length must be aligned to 16"
 
         # Get ready
-        recv = self.get_ready()
+        recv = self.get_ready(depth=d)
         self._log('Get ready:', recv)
         if not recv:
             return False, 'failed to get ready'

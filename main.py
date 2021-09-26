@@ -27,6 +27,7 @@ class Print:
 
 
 app = Nanoweb()
+depth = 0
 
 
 def log(fmt, *args):
@@ -78,7 +79,7 @@ class Response:
         d = dict()
         items = ((k, v) for k, v in self.__dict__.items() if not k.startswith('__'))
         for k, v in items:
-            d[k] = str(v)
+            d[k] = v
         return json.dumps(d)
 
 
@@ -99,9 +100,41 @@ async def handle_battery(req):
         return 500, r
 
 
+@app.route('/depth')
+@respond
+async def handle_depth(req):
+    global depth
+
+    if req.method not in ('GET', 'POST'):
+        return 405, Response(error='method not allowed')
+
+    if req.method == 'GET':
+        return 200, Response(depth=depth)
+    elif req.method == 'POST':
+        typ = req.headers.get('Content-Type', '')
+        if typ != 'application/json':
+            return 405, Response(error='method not allowed')
+        content_len = req.headers.get('Content-Length')
+        if content_len is None:
+            return 400, Response(error='bad request, content length is not specified or zero')
+
+        body = await req.read(int(content_len))
+        j = json.loads(body)
+
+        d = j.get('depth')
+        if d is None:
+            return 400, Response(error='bad request, request object has no depth key')
+        elif not isinstance(d, int):
+            return 400, Response(error='bad request, depth value is not int')
+
+        depth = d
+        return 200, Response()
+
+
 @app.route('/prints')
 @respond
 async def handle_prints(req):
+    global depth
     gc.collect()
 
     if req.method not in ('GET', 'POST'):
@@ -122,7 +155,7 @@ async def handle_prints(req):
     body = zlib.decompress(zl)
     log('decompressed: {} bytes'.format(len(body)))
 
-    success, reason = t.print(body)
+    success, reason = t.print(body, depth)
     if not success:
         return 500, Response(error='failed to print: ' + reason)
     return 200, Response()

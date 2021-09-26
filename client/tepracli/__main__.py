@@ -50,14 +50,15 @@ def battery(ctx):
 
 
 @cmd.command(name='print', cls=OrderedParamsCommand)
-@click.option('--preview', is_flag=True)
-@click.option('--font', '-f')
-@click.option('--fontsize', '-S', default=30)
-@click.option('--message', '-m', multiple=True)
-@click.option('--space', '-s', multiple=True)
-@click.option('--qr', '-q', multiple=True)
+@click.option('--preview', is_flag=True, help='Generate preview.png without printing.')
+@click.option('--font', '-f', help='Path or name of font. (default = bundled Adobe Source Sans)')
+@click.option('--fontsize', '-S', default=30, help='Font size. [px]')
+@click.option('--depth', '-d', default=0, type=click.IntRange(-3, 3), help='Depth of color. Default=0, Min=-3, Max=3')
+@click.option('--message', '-m', multiple=True, help='Print a text.')
+@click.option('--space', '-s', multiple=True, help='Leave space between parts. [px]')
+@click.option('--qr', '-q', multiple=True, help='Draw a QR code.')
 @click.pass_context
-def do_print(ctx, preview, font, fontsize, **_):
+def do_print(ctx, preview, font, fontsize, depth, **_):
     if ctx.obj.get('parts') is None:
         print('Please specify at least one part with -m/--message, -s/--space, and -q/--qr', file=sys.stderr)
         sys.exit(1)
@@ -136,9 +137,14 @@ def do_print(ctx, preview, font, fontsize, **_):
         encoded += line
 
     c = Client(ctx.obj['address'])
+
+    err = c.post_depth(depth)
+    if err:
+        print(f'Failed to POST depth: {err}', file=sys.stderr)
+
     err = c.post_print(zlib.compress(encoded))
     if err:
-        print(err, file=sys.stderr)
+        print(f'Failed to POST print: {err}', file=sys.stderr)
 
 
 cmd()
