@@ -4,7 +4,8 @@ import zlib
 import cv2
 import numpy as np
 
-ENTER_KEY = 13
+ENTER_KEY_WIN = 13
+ENTER_KEY_LINUX = 10
 ESC_KEY = 27
 
 def nothing(x):
@@ -54,7 +55,7 @@ while True:
     cv2.imshow(windowname, frame)
 
     key = cv2.waitKey(100)
-    if key == ENTER_KEY:
+    if (key == ENTER_KEY_WIN) | (key == ENTER_KEY_LINUX):
         cv2.destroyAllWindows()
         break
     elif key == ESC_KEY:
