@@ -26,6 +26,7 @@ class Print:
         return {'id': self.id, 'width': self.size[0], 'height': self.size[1], 'done': self.done}
 
 
+t = tepra.Tepra(debug=True)
 app = Nanoweb()
 depth = 0
 
@@ -161,27 +162,41 @@ async def handle_prints(req):
     return 200, Response()
 
 
-# Read the config
-with open('config.json', 'r') as f:
-    conf = json.load(f)
+async def main():
+    global t
 
-# Bring up the Wi-Fi
-ok = wifi.up(conf['ssid'], conf['psk'])
-if not ok:
-    log('Failed to establish a Wi-Fi connection, resetting')
-    machine.reset()
+    # Read the config
+    with open('config.json', 'r') as f:
+        conf = json.load(f)
 
-wifi.show_ifconfig()
+    while True:
+        # Bring up the Wi-Fi (it will do nothing if it's already connected)
+        ok = wifi.up(conf['ssid'], conf['psk'])
+        if not ok:
+            log('Failed to establish a Wi-Fi connection, resetting')
+            machine.reset()
 
-t = tepra.Tepra(debug=True)
+        wifi.show_ifconfig()
 
-log('Waiting for a Tepra Lite')
-while not t.connect():
-    time.sleep_ms(1000)
+        try:
+            t.activate()
+            log('Activated BLE')
 
-log('Connected')
-log('Launching the Tepra API')
+            log('Scanning and connecting to a TEPRA Lite')
+            while not t.connect():
+                time.sleep_ms(1000)
 
-loop = uasyncio.get_event_loop()
-loop.create_task(app.run())
-loop.run_forever()
+            log('Connected')
+
+            async with await app.run():
+                log('Launched API')
+                await t.wait_disconnection()
+
+            log('Canceled API')
+        finally:
+            t.deactivate()
+            log('Deactivated BLE')
+
+
+while True:
+    uasyncio.run(main())

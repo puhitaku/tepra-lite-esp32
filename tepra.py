@@ -5,6 +5,7 @@ import binascii
 import bluetooth
 import gc
 import time
+import uasyncio
 from ble_advertising import decode_name
 from micropython import const
 
@@ -136,6 +137,7 @@ class BLESimpleCentral:
     _read_done_callback = None
     _write_done_callback = None
     _conn_callback = None
+    _disconn_callback = None
 
     # Persistent callback for when new data is notified from the device
     _notify_callback = None
@@ -147,9 +149,6 @@ class BLESimpleCentral:
 
     def __init__(self, ble, debug=False):
         self._ble = ble
-        self._ble.active(True)
-        self._ble.irq(self._irq)
-
         self._reset()
         self._debug = debug
 
@@ -166,6 +165,7 @@ class BLESimpleCentral:
         self._desc_scan_callback = None
         self._desc_done_callback = None
         self._conn_callback = None
+        self._disconn_callback = None
         self._read_callback = None
         self._read_done_callback = None
         self._write_done_callback = None
@@ -212,6 +212,9 @@ class BLESimpleCentral:
             # Disconnected (either initiated by us or the remote end)
             conn_handle, _, _ = data
             if conn_handle == self._conn_handle:
+                if self._disconn_callback is not None:
+                    self._disconn_callback()
+
                 # If it was initiated by us, it'll already be reset
                 self._reset()
 
@@ -279,6 +282,13 @@ class BLESimpleCentral:
         if not self._debug:
             return
         print('BT:', *o)
+
+    def activate(self):
+        self._ble.active(True)
+        self._ble.irq(self._irq)
+
+    def deactivate(self):
+        self._ble.active(False)
 
     def scan(self) -> bool:
         """Find a device advertising the environmental sensor service."""
@@ -547,6 +557,17 @@ class BLESimpleCentral:
         self._notify_callback = None
         return rx_data
 
+    async def wait_disconnection(self):
+        flag = uasyncio.ThreadSafeFlag()
+
+        def callback():
+            nonlocal flag
+            flag.set()
+
+        self._disconn_callback = callback
+        await flag.wait()
+        self._disconn_callback = None
+
 
 def hexstr(b: bytes):
     return str(binascii.hexlify(bytes(b)))
@@ -571,19 +592,23 @@ class Tepra:
     _tx: Characteristic
     _rx: Characteristic
 
-    _ble = bluetooth.BLE
     _central = BLESimpleCentral
     _debug = False
 
     def __init__(self, debug=False):
-        self._ble = bluetooth.BLE()
-        self._central = BLESimpleCentral(self._ble, debug=debug)
+        self._central = BLESimpleCentral(bluetooth.BLE(), debug=debug)
         self._debug = debug
 
     def _log(self, *o):
         if not self._debug:
             return
         print('Tepra:', *o)
+
+    def activate(self):
+        self._central.activate()
+
+    def deactivate(self):
+        self._central.deactivate()
 
     def connect(self) -> bool:
         # Scan and find a TEPRA Lite
@@ -635,8 +660,8 @@ class Tepra:
         self._central.write_cccd(self._rx, indication=False, notification=True)
         return True
 
-    def disconnect(self):
-        raise NotImplementedError
+    async def wait_disconnection(self):
+        await self._central.wait_disconnection()
 
     def fetch_remaining_battery(self) -> (bool, int):
         recv = self._central.read(self._battery_chr)
