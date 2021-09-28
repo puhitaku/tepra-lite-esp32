@@ -26,7 +26,7 @@ def main():
     height, width = gray.shape
     if height != 64:
         print("Image height is invalid", file=sys.stderr)
-        return 3
+        return 1
 
     cv2.namedWindow(windowname, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL)
 
