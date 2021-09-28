@@ -34,8 +34,6 @@ _IRQ_GATTC_WRITE_DONE = const(17)
 _IRQ_GATTC_NOTIFY = const(18)
 _IRQ_GATTC_INDICATE = const(19)
 
-LR30_DEVICE_NAME = 'LR30'
-
 
 class Service:
     start_handle: int
@@ -190,7 +188,7 @@ class BLESimpleCentral:
                 )
             )
 
-            if name == LR30_DEVICE_NAME:
+            if name.startswith('LR30'):
                 # Found a potential device, remember it and stop scanning
                 self._addr_type = addr_type
                 self._addr = bytes(addr)  # Note: addr buffer is owned by caller so need to copy it
