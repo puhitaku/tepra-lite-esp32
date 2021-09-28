@@ -74,4 +74,3 @@ for y in range(height):
 
 with open('hello.bin', 'wb') as f:
     f.write(zlib.compress(encoded))
-# cv2.imwrite('hello_binalized.png', binalized)
