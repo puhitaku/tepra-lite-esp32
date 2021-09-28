@@ -46,7 +46,7 @@ while True:
                 else:
                     cumulative_err -= 1.0 - linear_val
                     binalized[y, x] = 255
-        calc_done = 1
+        calc_done = True
 
     frame = cv2.cvtColor(binalized, cv2.COLOR_GRAY2BGR)
     frame = cv2.vconcat([img, frame])
