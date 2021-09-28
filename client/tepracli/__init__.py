@@ -23,10 +23,7 @@ class Client:
         return bat, ''
 
     def post_depth(self, depth: int) -> str:
-        res = requests.post(
-            f'http://{self.origin}/depth',
-            json={'depth': depth}
-        )
+        res = requests.post(f'http://{self.origin}/depth', json={'depth': depth})
         j = res.json()
         err = j.get('error', '')
         if err:
@@ -37,7 +34,7 @@ class Client:
         res = requests.post(
             f'http://{self.origin}/prints',
             compressed_image,
-            headers={'Content-Type': 'application/octet-stream'}
+            headers={'Content-Type': 'application/octet-stream'},
         )
         j = res.json()
         err = j.get('error', '')

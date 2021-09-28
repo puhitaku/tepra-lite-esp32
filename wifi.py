@@ -33,4 +33,3 @@ def up(ssid, psk):
 
 def show_ifconfig():
     print('Address: {}, Netmask: {}, GW: {}, DNS: {}'.format(*wifi.ifconfig()))
-

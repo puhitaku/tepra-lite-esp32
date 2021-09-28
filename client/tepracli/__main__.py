@@ -51,15 +51,22 @@ def battery(ctx, address):
 @click.option('--address', '-a', required=True, help='The address of TEPRA Lite LR30.')
 @click.option('--preview', is_flag=True, help='Generate preview.png without printing.')
 @click.option('--font', '-f', help='Path or name of font. (default = bundled Adobe Source Sans)')
-@click.option('--fontsize', '-S', default=30, type=click.IntRange(0), help='Font size. [px] (default = 30)')
-@click.option('--depth', '-d', default=0, type=click.IntRange(-3, 3), help='Depth of color. (default = 0)')
+@click.option(
+    '--fontsize', '-S', default=30, type=click.IntRange(0), help='Font size. [px] (default = 30)'
+)
+@click.option(
+    '--depth', '-d', default=0, type=click.IntRange(-3, 3), help='Depth of color. (default = 0)'
+)
 @click.option('--message', '-m', multiple=True, help='Print a text.')
 @click.option('--space', '-s', multiple=True, help='Leave space between parts. [px]')
 @click.option('--qr', '-q', multiple=True, help='Draw a QR code.')
 @click.pass_context
 def do_print(ctx, address, preview, font, fontsize, depth, **_):
     if ctx.obj.get('parts') is None:
-        print('Please specify at least one part with -m/--message, -s/--space, and -q/--qr', file=sys.stderr)
+        print(
+            'Please specify at least one part with -m/--message, -s/--space, and -q/--qr',
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     if not font:
@@ -78,7 +85,9 @@ def do_print(ctx, address, preview, font, fontsize, depth, **_):
             actual_width = font.getmask(content).getbbox()[2] + 2  # add 2px for safe anti-aliasing
             im = Image.new('L', (actual_width, height), 'white')
             draw = ImageDraw.Draw(im)
-            draw.text((actual_width // 2, height // 2), content, font=font, fill='black', anchor='mm')
+            draw.text(
+                (actual_width // 2, height // 2), content, font=font, fill='black', anchor='mm'
+            )
             rendered.append(im)
         elif typ.name == 'space':
             im = Image.new('L', (int(content), height), 'white')
@@ -92,7 +101,10 @@ def do_print(ctx, address, preview, font, fontsize, depth, **_):
             if im.height <= height // 2:
                 im = im.resize((im.width * 2, im.height * 2), resample=Image.NEAREST)
             elif im.height > 64:
-                print(f'Generated QR code exceeds 64px ({im.height}px). Please try a shorter string.', file=sys.stderr)
+                print(
+                    f'Generated QR code exceeds 64px ({im.height}px). Please try a shorter string.',
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             newim = Image.new('L', (im.width, 64), 'white')
             newim.paste(im, (0, 64 // 2 - im.height // 2))
@@ -129,7 +141,7 @@ def do_print(ctx, address, preview, font, fontsize, depth, **_):
     encoded = b''
     for y in range(im.height):
         aggregated = 0
-        for shift, x in enumerate(range(im.width-1, -1, -1)):
+        for shift, x in enumerate(range(im.width - 1, -1, -1)):
             if im.getpixel((x, y)) <= 127:
                 aggregated += 1 << shift
         line = aggregated.to_bytes(8, 'big')

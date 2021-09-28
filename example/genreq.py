@@ -16,15 +16,14 @@ im = im.rotate(-90, expand=True)
 encoded = b''
 for y in range(im.height):
     aggregated = 0
-    for shift, x in enumerate(range(im.width-1, -1, -1)):
+    for shift, x in enumerate(range(im.width - 1, -1, -1)):
         if im.getpixel((x, y)) <= 127:
             aggregated += 1 << shift
     line = aggregated.to_bytes(8, 'big')
     encoded += line
     print(binascii.hexlify(line))
 
-with open('hello.bin', 'wb') as f, open('hello.raw.bin', 'wb') as g:
+with open('hello.bin', 'wb') as f:
     f.write(zlib.compress(encoded))
-    g.write(encoded)
 
-im.save('out.png')
+im.save('generated.png')
