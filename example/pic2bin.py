@@ -12,20 +12,20 @@ ESC_KEY = 27
 def main():
     global ENTER_KEY_WIN, ENTER_KEY_LINUX, ESC_KEY
     if len(sys.argv) <= 1:
-        print("usage: pic2bin.py <imagefile>")
+        print("usage: pic2bin.py <imagefile>", file=sys.stderr)
         return 1
 
     windowname = sys.argv[1] + "    Enter : save    Esc : quit"
 
     img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR)
     if img is None:
-        print("Image open error")
+        print("Image open error", file=sys.stderr)
         return 2
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     height, width = gray.shape
     if height != 64:
-        print("Image height is invalid")
+        print("Image height is invalid", file=sys.stderr)
         return 3
 
     cv2.namedWindow(windowname, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL)
