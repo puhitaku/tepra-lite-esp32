@@ -13,7 +13,7 @@ if len(sys.argv) <= 1:
     print("usage: pic2bin.py <imagefile>")
     sys.exit()
 
-windowname = sys.argv[1] + '    Enter : save    Esc : quit'
+windowname = sys.argv[1] + "    Enter : save    Esc : quit"
 
 img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR)
 if img is None:
@@ -28,7 +28,7 @@ if height != 64:
 
 cv2.namedWindow(windowname, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL)
 
-lut = np.arange(256, dtype='float32')
+lut = np.arange(256, dtype="float32")
 lut = pow((lut / 255), 2.2)
 
 binalized = np.zeros((height, width, 1), np.uint8)
@@ -62,15 +62,15 @@ while True:
 img_out = cv2.rotate(binalized, cv2.ROTATE_90_CLOCKWISE)
 height, width = img_out.shape
 
-encoded = b''
+encoded = b""
 for y in range(height):
     aggregated = 0
     for shift, x in enumerate(range(width - 1, -1, -1)):
         if img_out[y, x] <= 127:
             aggregated += 1 << shift
-    line = aggregated.to_bytes(8, 'big')
+    line = aggregated.to_bytes(8, "big")
     encoded += line
     print(binascii.hexlify(line))
 
-with open('hello.bin', 'wb') as f:
+with open("hello.bin", "wb") as f:
     f.write(zlib.compress(encoded))
