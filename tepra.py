@@ -498,7 +498,9 @@ class BLESimpleCentral:
         self._write_done_callback = None
         return
 
-    def write_wait_notification(self, tx: Characteristic, tx_data: bytes, rx: Characteristic) -> Optional[bytes]:
+    def write_wait_notification(
+        self, tx: Characteristic, tx_data: bytes, rx: Characteristic
+    ) -> Optional[bytes]:
         """Write without response and wait for a notification"""
         rx_data = None
 
@@ -621,9 +623,9 @@ class Tepra:
             return False
 
         # Look for characteristics
-        self._battery_chr = lookup_characteristic(chrs, bluetooth.UUID(0x2a19))
-        self._tx = lookup_characteristic(chrs, bluetooth.UUID(0xfff2))
-        self._rx = lookup_characteristic(chrs, bluetooth.UUID(0xfff1))
+        self._battery_chr = lookup_characteristic(chrs, bluetooth.UUID(0x2A19))
+        self._tx = lookup_characteristic(chrs, bluetooth.UUID(0xFFF2))
+        self._rx = lookup_characteristic(chrs, bluetooth.UUID(0xFFF1))
 
         if self._tx is None or self._rx is None:
             self._log('Failed to lookup the printer status characteristic, resetting...')
@@ -655,7 +657,7 @@ class Tepra:
         d = 0x10 - depth if depth < 0 else 0x00 + depth
         self._log('Depth: {} ({:02x})'.format(depth, d))
 
-        recv = self._central.write_wait_notification(self._tx, p(0xf0, 0x5b, d, 0x06), self._rx)
+        recv = self._central.write_wait_notification(self._tx, p(0xF0, 0x5B, d, 0x06), self._rx)
         if not recv:
             return False
         self._log('Recv:', hexstr(recv))
@@ -680,16 +682,32 @@ class Tepra:
         i = 1
         err = ""
 
-        for ofs in range(0, len(b)-1, 16):
+        for ofs in range(0, len(b) - 1, 16):
             # Print until EOF
             # The stream returns 16 bytes or shorter bytes if there are no body to read
 
-            buf = bytes((
-                0xf0,
-                0x5c,
-                b[ofs+6], b[ofs+7], b[ofs+4], b[ofs+5], b[ofs+2], b[ofs+3], b[ofs+0], b[ofs+1],
-                b[ofs+14], b[ofs+15], b[ofs+12], b[ofs+13], b[ofs+10], b[ofs+11], b[ofs+8], b[ofs+9],
-            ))
+            buf = bytes(
+                (
+                    0xF0,
+                    0x5C,
+                    b[ofs + 6],
+                    b[ofs + 7],
+                    b[ofs + 4],
+                    b[ofs + 5],
+                    b[ofs + 2],
+                    b[ofs + 3],
+                    b[ofs + 0],
+                    b[ofs + 1],
+                    b[ofs + 14],
+                    b[ofs + 15],
+                    b[ofs + 12],
+                    b[ofs + 13],
+                    b[ofs + 10],
+                    b[ofs + 11],
+                    b[ofs + 8],
+                    b[ofs + 9],
+                )
+            )
 
             self._central.write(self._tx, buf)
 
@@ -702,13 +720,13 @@ class Tepra:
             i += 1
 
         # End sending lines
-        recv = self._central.write_wait_notification(self._tx, p(0xf0, 0x5d, 0x00), self._rx)
+        recv = self._central.write_wait_notification(self._tx, p(0xF0, 0x5D, 0x00), self._rx)
         self._log('End sending lines:', hexstr(recv))
 
         self._log('Waiting for the print to finish...')
         done = False
         while not done:
-            recv = self._central.write_wait_notification(self._tx, p(0xf0, 0x5e), self._rx)
+            recv = self._central.write_wait_notification(self._tx, p(0xF0, 0x5E), self._rx)
             if len(recv) < 4:
                 self._log('Received an invalid reply:', hexstr(recv))
                 return False, 'received an invalid reply: ' + hexstr(recv)
