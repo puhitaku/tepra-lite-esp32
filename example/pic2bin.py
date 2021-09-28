@@ -9,10 +9,6 @@ ENTER_KEY_LINUX = 10
 ESC_KEY = 27
 
 
-def nothing(x):
-    pass
-
-
 if len(sys.argv) <= 1:
     print("usage: pic2bin.py <imagefile>")
     sys.exit()
