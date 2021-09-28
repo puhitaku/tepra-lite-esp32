@@ -8,30 +8,32 @@ ENTER_KEY_WIN = 13
 ENTER_KEY_LINUX = 10
 ESC_KEY = 27
 
+
 def nothing(x):
     pass
 
+
 if len(sys.argv) <= 1:
     print("usage: pic2bin.py <imagefile>")
-    sys.exit( )
+    sys.exit()
 
 windowname = sys.argv[1] + '    Enter : save    Esc : quit'
 
 img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR)
 if img is None:
     print("Image open error")
-    sys.exit( )
+    sys.exit()
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 height, width = gray.shape
 if height != 64:
     print("Image height is invalid")
-    sys.exit( )
+    sys.exit()
 
 cv2.namedWindow(windowname, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL)
 
-lut = np.arange(256,dtype='float32')
-lut = pow((lut/255), 2.2)
+lut = np.arange(256, dtype='float32')
+lut = pow((lut / 255), 2.2)
 
 binalized = np.zeros((height, width, 1), np.uint8)
 
@@ -59,7 +61,7 @@ while True:
         cv2.destroyAllWindows()
         break
     elif key == ESC_KEY:
-        sys.exit( )
+        sys.exit()
 
 img_out = cv2.rotate(binalized, cv2.ROTATE_90_CLOCKWISE)
 height, width = img_out.shape
@@ -67,7 +69,7 @@ height, width = img_out.shape
 encoded = b''
 for y in range(height):
     aggregated = 0
-    for shift, x in enumerate(range(width-1, -1, -1)):
+    for shift, x in enumerate(range(width - 1, -1, -1)):
         if img_out[y, x] <= 127:
             aggregated += 1 << shift
     line = aggregated.to_bytes(8, 'big')
