@@ -7,8 +7,8 @@ import zlib
 
 from nanoweb.nanoweb import Nanoweb
 
-import tepra
 import wifi
+from tepra import Tepra, new_logger
 from typ1ng import Optional, Tuple
 
 
@@ -26,13 +26,10 @@ class Print:
         return {'id': self.id, 'width': self.size[0], 'height': self.size[1], 'done': self.done}
 
 
-t = tepra.Tepra(debug=True)
+log = new_logger('Main   :')
+t = Tepra(debug=True)
 app = Nanoweb()
 depth = 0
-
-
-def log(fmt, *args):
-    print('[{:04.02f}]'.format(time.ticks_ms() / 1000), fmt.format(*args))
 
 
 def respond(fn):
@@ -152,9 +149,9 @@ async def handle_prints(req):
         return 400, Response(error='bad request, content length is not specified or zero')
 
     zl = await req.read(int(content_len))
-    log('read from request body: {} bytes'.format(len(zl)))
+    log('read from request body: {} bytes', len(zl))
     body = zlib.decompress(zl)
-    log('decompressed: {} bytes'.format(len(body)))
+    log('decompressed: {} bytes', len(body))
 
     success, reason = t.print(body, depth)
     if not success:

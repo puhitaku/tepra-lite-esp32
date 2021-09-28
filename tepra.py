@@ -36,6 +36,12 @@ _IRQ_GATTC_NOTIFY = const(18)
 _IRQ_GATTC_INDICATE = const(19)
 
 
+def new_logger(name):
+    def _log(fmt, *o):
+        print('[{:08.3f}] {}'.format(time.ticks_ms() / 1000, name), fmt.format(*o))
+    return _log
+
+
 class Service:
     start_handle: int
     end_handle: int
@@ -151,6 +157,7 @@ class BLESimpleCentral:
         self._ble = ble
         self._reset()
         self._debug = debug
+        self._log = new_logger('Central:')
 
     def _reset(self):
         self._name = None
@@ -183,9 +190,13 @@ class BLESimpleCentral:
             name = decode_name(adv_data) or '?'
             name = name.strip('\x00')
             self._log(
-                'adv_type={} addr={} name={} {} rssi={} adv_data={}'.format(
-                    adv_type, addr_hex, name, len(name), rssi, str(bytes(adv_data))
-                )
+                'adv_type={} addr={} name={} {} rssi={} adv_data={}',
+                adv_type,
+                addr_hex,
+                name,
+                len(name),
+                rssi,
+                str(bytes(adv_data))
             )
 
             if name.startswith('LR30'):
@@ -277,11 +288,6 @@ class BLESimpleCentral:
             if conn_handle == self._conn_handle:
                 if self._notify_callback is not None:
                     self._notify_callback(value_handle, data)
-
-    def _log(self, *o):
-        if not self._debug:
-            return
-        print('BT:', *o)
 
     def activate(self):
         self._ble.active(True)
@@ -451,7 +457,7 @@ class BLESimpleCentral:
         if self._conn_handle is None:
             return
 
-        self._log('Writing without response: {}'.format(hexstr(data)))
+        self._log('Writing without response: {}', hexstr(data))
         self._ble.gattc_write(self._conn_handle, c.value_handle, data, 0)
         return
 
@@ -598,11 +604,7 @@ class Tepra:
     def __init__(self, debug=False):
         self._central = BLESimpleCentral(bluetooth.BLE(), debug=debug)
         self._debug = debug
-
-    def _log(self, *o):
-        if not self._debug:
-            return
-        print('Tepra:', *o)
+        self._log = new_logger('TEPRA  :')
 
     def activate(self):
         self._central.activate()
@@ -620,13 +622,13 @@ class Tepra:
         # Connect to it
         success = self._central.connect()
         if not success:
-            self._log('Failed to connect to the TEPRA Lite, resetting...')
+            self._log('Failed to connect to the TEPRA Lite')
             return False
 
         # Discover all services
         svcs = self._central.discover_services()
         if not svcs:
-            self._log('Failed to discover any service of TEPRA Lite, resetting...')
+            self._log('Failed to discover any service of TEPRA Lite')
             return False
 
         # Discover all characteristics in all services
@@ -635,7 +637,7 @@ class Tepra:
             chrs.append(self._central.discover_characteristics(svc))
 
         if not chrs:
-            self._log('Failed to discover any characteristic of the service, resetting...')
+            self._log('Failed to discover any characteristic of the service')
             return False
 
         # Discover all descriptors in all services
@@ -644,7 +646,7 @@ class Tepra:
             descs.append(self._central.discover_descriptors(svc))
 
         if len(chrs) < 2:
-            self._log('Insufficient number of characteristics, resetting...')
+            self._log('Insufficient number of characteristics')
             return False
 
         # Look for characteristics
@@ -653,7 +655,7 @@ class Tepra:
         self._rx = lookup_characteristic(chrs, bluetooth.UUID(0xFFF1))
 
         if self._tx is None or self._rx is None:
-            self._log('Failed to lookup the printer status characteristic, resetting...')
+            self._log('Failed to lookup the printer status characteristic')
             return False
 
         # Set CCCD of RX characteristics
@@ -674,18 +676,18 @@ class Tepra:
         recv = self._central.write_wait_notification(self._tx, b'\xf0\x5a', self._rx)
         if not recv:
             return False
-        self._log('Recv:', hexstr(recv))
+        self._log('Recv: {}', hexstr(recv))
 
         if depth < -3 or depth > 3:
             raise ValueError('invalid depth: {}'.format(depth))
 
         d = 0x10 - depth if depth < 0 else 0x00 + depth
-        self._log('Depth: {} ({:02x})'.format(depth, d))
+        self._log('Depth: {} ({:02x})', depth, d)
 
         recv = self._central.write_wait_notification(self._tx, p(0xF0, 0x5B, d, 0x06), self._rx)
         if not recv:
             return False
-        self._log('Recv:', hexstr(recv))
+        self._log('Recv: {}', hexstr(recv))
 
         return True
 
@@ -700,7 +702,7 @@ class Tepra:
 
         # Get ready
         recv = self.get_ready(depth=d)
-        self._log('Get ready:', recv)
+        self._log('Get ready: {}', recv)
         if not recv:
             return False, 'failed to get ready'
 
@@ -746,14 +748,14 @@ class Tepra:
 
         # End sending lines
         recv = self._central.write_wait_notification(self._tx, p(0xF0, 0x5D, 0x00), self._rx)
-        self._log('End sending lines:', hexstr(recv))
+        self._log('End sending lines: {}', hexstr(recv))
 
         self._log('Waiting for the print to finish...')
         done = False
         while not done:
             recv = self._central.write_wait_notification(self._tx, p(0xF0, 0x5E), self._rx)
             if len(recv) < 4:
-                self._log('Received an invalid reply:', hexstr(recv))
+                self._log('Received an invalid reply: {}', hexstr(recv))
                 return False, 'received an invalid reply: ' + hexstr(recv)
             done = recv[2] != 0x01
 
