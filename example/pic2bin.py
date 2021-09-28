@@ -20,7 +20,7 @@ def main():
     img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR)
     if img is None:
         print("Image open error", file=sys.stderr)
-        return 2
+        return 1
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     height, width = gray.shape
