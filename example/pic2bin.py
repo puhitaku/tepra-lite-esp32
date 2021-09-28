@@ -34,7 +34,7 @@ lut = pow((lut / 255), 2.2)
 binalized = np.zeros((height, width, 1), np.uint8)
 
 cumulative_err = 0
-calc_done = 0
+calc_done = False
 while True:
     if not calc_done:
         for y in range(height):
