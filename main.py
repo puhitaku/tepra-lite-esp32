@@ -11,6 +11,8 @@ import wifi
 from tepra import Tepra, new_logger
 from typ1ng import Optional, Tuple
 
+__version__ = '1.0.0'
+
 
 class Print:
     id: int
@@ -79,6 +81,16 @@ class Response:
         for k, v in items:
             d[k] = v
         return json.dumps(d)
+
+
+@app.route('/version')
+@respond
+async def handle_version(req):
+    if req.method != 'GET':
+        return 405, Response(error='method not allowed')
+    r = Response()
+    r.version = __version__
+    return 200, r
 
 
 @app.route('/battery')
