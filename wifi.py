@@ -1,6 +1,9 @@
 import network
 import utime
 
+from tepra import new_logger
+
+log = new_logger('Wi-Fi  :')
 wifi = network.WLAN(network.STA_IF)
 
 
@@ -8,8 +11,8 @@ def up(ssid, psk):
     if wifi.isconnected():
         return True
 
-    print('Connecting to an AP')
-    print('SSID: {}, PSK: (hidden)'.format(ssid))
+    log('Connecting to an AP')
+    log('SSID: {}, PSK: (hidden)', ssid)
 
     wifi.active(True)
     wifi.connect(ssid, psk)
@@ -24,12 +27,12 @@ def up(ssid, psk):
             break
         utime.sleep(1)
     else:
-        print('Failed to connect: timed out')
+        log('Failed to connect: timed out')
         return False
 
-    print('Successfully connected')
+    log('Successfully connected')
     return True
 
 
 def show_ifconfig():
-    print('Address: {}, Netmask: {}, GW: {}, DNS: {}'.format(*wifi.ifconfig()))
+    log('Address: {}, Netmask: {}, GW: {}, DNS: {}', *wifi.ifconfig())

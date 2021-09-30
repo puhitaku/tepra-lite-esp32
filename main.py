@@ -7,9 +7,11 @@ import zlib
 
 from nanoweb.nanoweb import Nanoweb
 
-import tepra
 import wifi
+from tepra import Tepra, new_logger
 from typ1ng import Optional, Tuple
+
+__version__ = '1.0.0'
 
 
 class Print:
@@ -26,12 +28,10 @@ class Print:
         return {'id': self.id, 'width': self.size[0], 'height': self.size[1], 'done': self.done}
 
 
+log = new_logger('Main   :')
+t = Tepra(debug=True)
 app = Nanoweb()
 depth = 0
-
-
-def log(fmt, *args):
-    print('[{:04.02f}]'.format(time.ticks_ms() / 1000), fmt.format(*args))
 
 
 def respond(fn):
@@ -81,6 +81,16 @@ class Response:
         for k, v in items:
             d[k] = v
         return json.dumps(d)
+
+
+@app.route('/version')
+@respond
+async def handle_version(req):
+    if req.method != 'GET':
+        return 405, Response(error='method not allowed')
+    r = Response()
+    r.version = __version__
+    return 200, r
 
 
 @app.route('/battery')
@@ -151,9 +161,9 @@ async def handle_prints(req):
         return 400, Response(error='bad request, content length is not specified or zero')
 
     zl = await req.read(int(content_len))
-    log('read from request body: {} bytes'.format(len(zl)))
+    log('read from request body: {} bytes', len(zl))
     body = zlib.decompress(zl)
-    log('decompressed: {} bytes'.format(len(body)))
+    log('decompressed: {} bytes', len(body))
 
     success, reason = t.print(body, depth)
     if not success:
@@ -161,27 +171,41 @@ async def handle_prints(req):
     return 200, Response()
 
 
-# Read the config
-with open('config.json', 'r') as f:
-    conf = json.load(f)
+async def main():
+    global t
 
-# Bring up the Wi-Fi
-ok = wifi.up(conf['ssid'], conf['psk'])
-if not ok:
-    log('Failed to establish a Wi-Fi connection, resetting')
-    machine.reset()
+    # Read the config
+    with open('config.json', 'r') as f:
+        conf = json.load(f)
 
-wifi.show_ifconfig()
+    while True:
+        # Bring up the Wi-Fi (it will do nothing if it's already connected)
+        ok = wifi.up(conf['ssid'], conf['psk'])
+        if not ok:
+            log('Failed to establish a Wi-Fi connection, resetting')
+            machine.reset()
 
-t = tepra.Tepra(debug=True)
+        wifi.show_ifconfig()
 
-log('Waiting for a Tepra Lite')
-while not t.connect():
-    time.sleep_ms(1000)
+        try:
+            t.activate()
+            log('Activated BLE')
 
-log('Connected')
-log('Launching the Tepra API')
+            log('Scanning and connecting to a TEPRA Lite')
+            while not t.connect():
+                time.sleep_ms(1000)
 
-loop = uasyncio.get_event_loop()
-loop.create_task(app.run())
-loop.run_forever()
+            log('Connected')
+
+            async with await app.run():
+                log('Launched API')
+                await t.wait_disconnection()
+
+            log('Canceled API')
+        finally:
+            t.deactivate()
+            log('Deactivated BLE')
+
+
+while True:
+    uasyncio.run(main())
