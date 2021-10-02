@@ -60,6 +60,7 @@ def battery(ctx, address):
 @click.option('--message', '-m', multiple=True, help='Print a text.')
 @click.option('--space', '-s', multiple=True, help='Leave space between parts. [px]')
 @click.option('--qr', '-q', multiple=True, help='Draw a QR code.')
+@click.option('--image', '-i', multiple=True, help='Paste an image.')
 @click.pass_context
 def do_print(ctx, address, preview, font, fontsize, depth, **_):
     if not preview and not address:
@@ -116,6 +117,11 @@ def do_print(ctx, address, preview, font, fontsize, depth, **_):
             newim = Image.new('L', (im.width, 64), 'white')
             newim.paste(im, (0, 64 // 2 - im.height // 2))
             rendered.append(newim)
+        elif typ.name == 'image':
+            im = Image.open(content)
+            new_width = height * int(im.size[0] / im.size[1])
+            new_height = height
+            rendered.append(im.resize((new_width, new_height)))
 
     merged = rendered[0]
     for im in rendered[1:]:
