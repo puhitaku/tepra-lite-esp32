@@ -48,7 +48,7 @@ def battery(ctx, address):
 
 
 @cmd.command(name='print', cls=OrderedParamsCommand)
-@click.option('--address', '-a', required=True, help='The address of TEPRA Lite LR30.')
+@click.option('--address', '-a', help='The address of TEPRA Lite LR30.')
 @click.option('--preview', is_flag=True, help='Generate preview.png without printing.')
 @click.option('--font', '-f', help='Path or name of font. (default = bundled Adobe Source Sans)')
 @click.option(
@@ -62,6 +62,13 @@ def battery(ctx, address):
 @click.option('--qr', '-q', multiple=True, help='Draw a QR code.')
 @click.pass_context
 def do_print(ctx, address, preview, font, fontsize, depth, **_):
+    if not preview and not address:
+        print(
+            'Please specify the address of a TEPRA Lite with -a/--address',
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     if ctx.obj.get('parts') is None:
         print(
             'Please specify at least one part with -m/--message, -s/--space, and -q/--qr',
