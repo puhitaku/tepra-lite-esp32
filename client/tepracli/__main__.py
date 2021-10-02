@@ -21,7 +21,7 @@ class OrderedParamsCommand(click.Command):
         parser = self.make_parser(ctx)
         opts, _, param_order = parser.parse_args(args=list(args))
         for param in param_order:
-            if param.name not in ('message, space, qr'):
+            if param.name not in ('message', 'space', 'qr', 'image'):
                 continue
             ctx.obj['parts'] = ctx.obj.get('parts', []) + [(param, opts[param.name].pop(0))]
 
