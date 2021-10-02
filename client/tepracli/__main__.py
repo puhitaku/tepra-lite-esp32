@@ -21,7 +21,7 @@ class OrderedParamsCommand(click.Command):
         parser = self.make_parser(ctx)
         opts, _, param_order = parser.parse_args(args=list(args))
         for param in param_order:
-            if param.name not in ('message, space, qr'):
+            if param.name not in ('message', 'space', 'qr', 'image'):
                 continue
             ctx.obj['parts'] = ctx.obj.get('parts', []) + [(param, opts[param.name].pop(0))]
 
@@ -48,7 +48,7 @@ def battery(ctx, address):
 
 
 @cmd.command(name='print', cls=OrderedParamsCommand)
-@click.option('--address', '-a', required=True, help='The address of TEPRA Lite LR30.')
+@click.option('--address', '-a', help='The address of TEPRA Lite LR30.')
 @click.option('--preview', is_flag=True, help='Generate preview.png without printing.')
 @click.option('--font', '-f', help='Path or name of font. (default = bundled Adobe Source Sans)')
 @click.option(
@@ -60,8 +60,16 @@ def battery(ctx, address):
 @click.option('--message', '-m', multiple=True, help='Print a text.')
 @click.option('--space', '-s', multiple=True, help='Leave space between parts. [px]')
 @click.option('--qr', '-q', multiple=True, help='Draw a QR code.')
+@click.option('--image', '-i', multiple=True, help='Paste an image.')
 @click.pass_context
 def do_print(ctx, address, preview, font, fontsize, depth, **_):
+    if not preview and not address:
+        print(
+            'Please specify the address of a TEPRA Lite with -a/--address',
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     if ctx.obj.get('parts') is None:
         print(
             'Please specify at least one part with -m/--message, -s/--space, and -q/--qr',
@@ -109,6 +117,11 @@ def do_print(ctx, address, preview, font, fontsize, depth, **_):
             newim = Image.new('L', (im.width, 64), 'white')
             newim.paste(im, (0, 64 // 2 - im.height // 2))
             rendered.append(newim)
+        elif typ.name == 'image':
+            im = Image.open(content)
+            new_width = height * int(im.size[0] / im.size[1])
+            new_height = height
+            rendered.append(im.resize((new_width, new_height)))
 
     merged = rendered[0]
     for im in rendered[1:]:
