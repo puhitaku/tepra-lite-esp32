@@ -17,11 +17,6 @@ def up(ssid, psk):
     wifi.active(True)
     wifi.connect(ssid, psk)
 
-    elapsed = 0
-    while not wifi.isconnected() and elapsed < 10:
-        utime.sleep(1)
-        elapsed += 1
-
     for _ in range(10):
         if wifi.isconnected():
             break
