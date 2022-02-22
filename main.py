@@ -180,7 +180,7 @@ async def main():
 
     while True:
         # Bring up the Wi-Fi (it will do nothing if it's already connected)
-        ok = wifi.up(conf['ssid'], conf['psk'])
+        ok = wifi.up(conf['ssid'], conf['psk'], conf['hostname'])
         if not ok:
             log('Failed to establish a Wi-Fi connection, resetting')
             machine.reset()

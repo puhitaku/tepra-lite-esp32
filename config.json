@@ -1,4 +1,5 @@
 {
   "ssid": "YOUR_SSID",
-  "psk": "YOUR_AP_PASSWORD"
+  "psk": "YOUR_AP_PASSWORD",
+  "hostname": "tepra"
 }
