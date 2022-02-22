@@ -37,7 +37,12 @@ def cmd(ctx):
 
 
 @cmd.command()
-@click.option('--address', '-a', default="tepra.local", help='The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)')
+@click.option(
+    '--address',
+    '-a',
+    default="tepra.local",
+    help='The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)',
+)
 @click.pass_context
 def battery(ctx, address):
     actual_address = socket.gethostbyname(address)
@@ -50,7 +55,12 @@ def battery(ctx, address):
 
 
 @cmd.command(name='print', cls=OrderedParamsCommand)
-@click.option('--address', '-a', default="tepra.local", help='The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)')
+@click.option(
+    '--address',
+    '-a',
+    default="tepra.local",
+    help='The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)',
+)
 @click.option('--preview', is_flag=True, help='Generate preview.png without printing.')
 @click.option('--font', '-f', help='Path or name of font. (default = bundled Adobe Source Sans)')
 @click.option(
