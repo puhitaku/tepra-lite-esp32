@@ -1,4 +1,5 @@
 import gzip
+import socket
 import sys
 import zlib
 from io import BytesIO
@@ -36,10 +37,16 @@ def cmd(ctx):
 
 
 @cmd.command()
-@click.option('--address', '-a', required=True, help='The address of TEPRA Lite LR30.')
+@click.option(
+    '--address',
+    '-a',
+    default="tepra.local",
+    help='The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)',
+)
 @click.pass_context
 def battery(ctx, address):
-    c = Client(address)
+    actual_address = socket.gethostbyname(address)
+    c = Client(actual_address)
     bat, err = c.get_battery()
     if err:
         print(f'Failed to get remaining battery: {err}')
@@ -48,7 +55,12 @@ def battery(ctx, address):
 
 
 @cmd.command(name='print', cls=OrderedParamsCommand)
-@click.option('--address', '-a', help='The address of TEPRA Lite LR30.')
+@click.option(
+    '--address',
+    '-a',
+    default="tepra.local",
+    help='The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)',
+)
 @click.option('--preview', is_flag=True, help='Generate preview.png without printing.')
 @click.option('--font', '-f', help='Path or name of font. (default = bundled Adobe Source Sans)')
 @click.option(
@@ -63,13 +75,6 @@ def battery(ctx, address):
 @click.option('--image', '-i', multiple=True, help='Paste an image.')
 @click.pass_context
 def do_print(ctx, address, preview, font, fontsize, depth, **_):
-    if not preview and not address:
-        print(
-            'Please specify the address of a TEPRA Lite with -a/--address',
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
     if ctx.obj.get('parts') is None:
         print(
             'Please specify at least one part with -m/--message, -s/--space, and -q/--qr',
@@ -160,7 +165,8 @@ def do_print(ctx, address, preview, font, fontsize, depth, **_):
         line = aggregated.to_bytes(8, 'big')
         encoded += line
 
-    c = Client(address)
+    actual_address = socket.gethostbyname(address)
+    c = Client(actual_address)
 
     err = c.post_depth(depth)
     if err:

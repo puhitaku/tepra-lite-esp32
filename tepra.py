@@ -39,6 +39,7 @@ _IRQ_GATTC_INDICATE = const(19)
 def new_logger(name):
     def _log(fmt, *o):
         print('[{:08.3f}] {}'.format(time.ticks_ms() / 1000, name), fmt.format(*o))
+
     return _log
 
 
@@ -196,7 +197,7 @@ class BLESimpleCentral:
                 name,
                 len(name),
                 rssi,
-                str(bytes(adv_data))
+                str(bytes(adv_data)),
             )
 
             if name.startswith('LR30'):
