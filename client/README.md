@@ -24,7 +24,7 @@ Subcommands:
 Usage: python -m tepracli print [OPTIONS]
 
 Options:
-  -a, --address TEXT            The address of TEPRA Lite LR30.  [required]
+  -a, --address TEXT            The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)
   --preview                     Generate preview.png without printing.
   -f, --font TEXT               Path or name of font. (default = bundled Adobe
                                 Source Sans)
@@ -55,7 +55,7 @@ It's not really useful: LR30 replies 99% as the percentage of remaining battery 
 Usage: python -m tepracli battery [OPTIONS]
 
 Options:
-  -a, --address TEXT  The address of TEPRA Lite LR30.  [required]
+  -a, --address TEXT  The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)
   --help              Show this message and exit.
 
 ```
