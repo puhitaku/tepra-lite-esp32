@@ -7,7 +7,7 @@ log = new_logger('Wi-Fi  :')
 wifi = network.WLAN(network.STA_IF)
 
 
-def up(ssid, psk):
+def up(ssid, psk, hostname):
     if wifi.isconnected():
         return True
 
@@ -15,6 +15,7 @@ def up(ssid, psk):
     log('SSID: {}, PSK: (hidden)', ssid)
 
     wifi.active(True)
+    wifi.config(dhcp_hostname=hostname)
     wifi.connect(ssid, psk)
 
     elapsed = 0
