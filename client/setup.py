@@ -27,7 +27,7 @@ setup(
     long_description_content_type='text/markdown',
     classifiers=__classifiers__,
     packages=find_packages(),
-    package_data={'': ['assets/ss3.ttf']},
+    package_data={'tepracli': ['assets/ss3.ttf']},
     include_package_data=True,
     install_requires=['click', 'pillow', 'qrcode[pil]', 'requests'],
     entry_points={'console_scripts': ['tepracli = tepracli.__main__:cmd']},
