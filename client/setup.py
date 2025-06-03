@@ -30,4 +30,5 @@ setup(
     package_data={'': ['assets/ss3.ttf']},
     include_package_data=True,
     install_requires=['click', 'pillow', 'qrcode[pil]', 'requests'],
+    entry_points={'console_scripts': ['tepracli = tepracli.__main__:cmd']},
 )
