@@ -1,14 +1,27 @@
 tepracli - reference impl. of tepra-lite-esp32 client
 =====================================================
 
-## Install
+## Install with pip
 
-tepracli is not uploaded to PyPI. Please clone this repository and install it with `pip install .`
-It's recommended to enable editable mode `-e`; pull this repository from remote and tepracli gets updated automatically.
+```
+$ pip install tepracli
+$ tepracli
+```
+
+## Install with uvx
+
+```
+$ uvx tepracli
+```
+
+## Install from source
+
+It's recommended to enable editable mode `-e`; pull this repository from remote and tepracli will be updated automatically.
 
 ```
 $ cd tepra-lite-esp32/client
 $ pip install -e .
+$ python -m tepracli
 ```
 
 ## Usage
@@ -21,7 +34,7 @@ Subcommands:
 ### Print
 
 ```
-Usage: python -m tepracli print [OPTIONS]
+Usage: tepracli print [OPTIONS]
 
 Options:
   -a, --address TEXT            The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)
@@ -52,7 +65,7 @@ Options:
 It's not really useful: LR30 replies 99% as the percentage of remaining battery every time.
 
 ```
-Usage: python -m tepracli battery [OPTIONS]
+Usage: tepracli battery [OPTIONS]
 
 Options:
   -a, --address TEXT  The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)
@@ -61,6 +74,6 @@ Options:
 ```
 
 ```
-$ python -m tepracli battery -a ${TEPRA_ADDRESS}
+$ tepracli battery -a ${TEPRA_ADDRESS}
 99%
 ```
