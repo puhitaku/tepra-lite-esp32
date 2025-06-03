@@ -85,7 +85,7 @@ def do_print(ctx, address, preview, font, fontsize, depth, **_):
     if not font:
         font = importlib.resources.files('tepracli.assets').joinpath('ss3.ttf.gz')
 
-    if font.endswith('.gz'):
+    if font.suffixes[-1] == '.gz':
         with open(font, 'rb') as gz:
             font = BytesIO(gzip.decompress(gz.read()))
 
