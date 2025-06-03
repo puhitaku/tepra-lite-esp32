@@ -1,11 +1,11 @@
 import gzip
+import importlib
 import socket
 import sys
 import zlib
 from io import BytesIO
 
 import click
-import pkg_resources
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 
@@ -83,7 +83,7 @@ def do_print(ctx, address, preview, font, fontsize, depth, **_):
         sys.exit(1)
 
     if not font:
-        font = pkg_resources.resource_filename('tepracli', 'assets/ss3.ttf.gz')
+        font = importlib.resources.files('tepracli.assets').joinpath('ss3.ttf.gz')
 
     if font.endswith('.gz'):
         with open(font, 'rb') as gz:
