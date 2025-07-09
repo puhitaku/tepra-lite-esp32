@@ -1,5 +1,6 @@
 import gzip
 import importlib
+import pathlib
 import socket
 import sys
 import zlib
@@ -62,7 +63,7 @@ def battery(ctx, address):
     help='The IP address or the URL of TEPRA Lite LR30. (default = tepra.local)',
 )
 @click.option('--preview', is_flag=True, help='Generate preview.png without printing.')
-@click.option('--font', '-f', help='Path or name of font. (default = bundled Adobe Source Sans)')
+@click.option('--font', '-f', type=click.Path(exists=True, path_type=pathlib.Path), help='Path to a font file. (default = bundled Adobe Source Sans)')
 @click.option(
     '--fontsize', '-S', default=30, type=click.IntRange(0), help='Font size. [px] (default = 30)'
 )
