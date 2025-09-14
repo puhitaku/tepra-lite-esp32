@@ -17,8 +17,9 @@ This is a reverse-engineered module to communicate with KING JIM TEPRA Lite LR30
  - ESP32
    - Developed on ESP-WROOM-32
    - Any ESP32 modules should be capable of running this
- - Latest stable MicroPython
-   - Developed on esp32-20210418-v1.15.bin
+ - MicroPython 1.21 ~ 1.25
+   - As of [68583dc](https://github.com/puhitaku/tepra-lite-esp32/commit/68583dc), tepra-lite-esp32 runs only on MicroPython 1.21+
+   - Please avoid using MicroPython 1.26+ because it won't work because of a broken IP stack or the underlying SDK. As of writing this, 1.27 dev version is also not working.
 
 
 ## Installing
