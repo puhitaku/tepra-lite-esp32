@@ -1,9 +1,10 @@
+import deflate
 import gc
+import io
 import json
 import machine
 import time
 import uasyncio
-import zlib
 
 from nanoweb.nanoweb import Nanoweb
 
@@ -11,7 +12,7 @@ import wifi
 from tepra import Tepra, new_logger
 from typ1ng import Optional, Tuple
 
-__version__ = '1.0.0'
+__version__ = '2.0.0'
 
 
 class Print:
@@ -162,7 +163,8 @@ async def handle_prints(req):
 
     zl = await req.read(int(content_len))
     log('read from request body: {} bytes', len(zl))
-    body = zlib.decompress(zl)
+    with deflate.DeflateIO(io.BytesIO(zl), deflate.ZLIB) as d:
+        body = d.read()
     log('decompressed: {} bytes', len(body))
 
     success, reason = t.print(body, depth)
