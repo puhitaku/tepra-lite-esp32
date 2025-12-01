@@ -200,7 +200,7 @@ class BLESimpleCentral:
                 str(bytes(adv_data)),
             )
 
-            if name.startswith('LR30'):
+            if name.startswith('LR30') or name.startswith('TepraBLE'):
                 # Found a potential device, remember it and stop scanning
                 self._addr_type = addr_type
                 self._addr = bytes(addr)  # Note: addr buffer is owned by caller so need to copy it
